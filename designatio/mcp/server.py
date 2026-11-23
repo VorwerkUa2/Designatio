@@ -23,6 +23,7 @@ from ..build_validation import validate_source
 from ..plugin_bundle import create_plugin_bundle, inspect_plugin_bundle
 from ..shader_validation import validate_shader
 from ..plugin_marketplace import create_marketplace_entry
+from ..mnemosyne_bridge import build_mnemosyne_mcp_config, create_mnemosyne_preview_manifest
 from ..publish import github_create_pr, github_create_issue
 from ..trust_store import TrustStore
 from ..preview_host import start_preview_server, stop_preview_server
@@ -303,6 +304,16 @@ TOOLS = [
         "description": "Describe the actual plugin sandbox boundary and limitations.",
         "inputSchema": {"type": "object", "properties": {"registryDir": {"type": "string"}}},
     },
+    {
+        "name": "design_mnemosyne_mcp_config",
+        "description": "Create a Mnemosyne-compatible Designatio MCP config.",
+        "inputSchema": {"type": "object", "properties": {"projectDir": {"type": "string"}}, "required": ["projectDir"]},
+    },
+    {
+        "name": "design_mnemosyne_preview_manifest",
+        "description": "Create a Mnemosyne preview manifest for a generated React/HTML preview.",
+        "inputSchema": {"type": "object", "properties": {"projectPath": {"type": "string"}, "previewDir": {"type": "string"}}, "required": ["projectPath", "previewDir"]},
+    },
 ]
 
 
@@ -486,6 +497,13 @@ def execute(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
 
     if name == "design_github_issue":
         return result(github_create_issue(arguments["repo"], arguments["title"], arguments.get("body", ""), arguments.get("labels", [])))
+
+    if name == "design_mnemosyne_mcp_config":
+        return result(build_mnemosyne_mcp_config(arguments["projectDir"]))
+
+    if name == "design_mnemosyne_preview_manifest":
+        project = load_project(arguments["projectPath"])
+        return result(create_mnemosyne_preview_manifest(arguments["previewDir"], project))
 
     if name == "design_trust_key":
         store = TrustStore(arguments.get("storeDir", "output/trust"))

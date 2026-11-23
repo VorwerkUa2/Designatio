@@ -35,7 +35,7 @@ def validate_source(target: str, source_dir: str | Path) -> dict[str, Any]:
         executable = shutil.which("flutter")
         if not executable:
             return {"target": normalized, "passed": False, "status": "toolchain-unavailable", "error": "flutter not found"}
-        runner = [executable, "analyze"]
+        runner = [executable, "analyze", "--no-pub"]
     elif normalized in {"compose", "kotlin", "android"}:
         gradle = source / ("gradlew.bat" if os.name == "nt" else "gradlew")
         if not gradle.is_file():

@@ -31,6 +31,7 @@
 - Loopback preview host and Mnemosyne handoff
 - Ed25519 trust store and key revocation
 - Windows/Linux CI matrix
+- Real Mnemosyne MCP config and preview manifest bridge
 - Mnemosyne preview handoff
 - Accessibility and responsive reports
 - End-to-end mockup pipeline

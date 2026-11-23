@@ -31,3 +31,36 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-eng
       - name: Run tests
         run: python -m pytest
+
+  react-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install
+        run: python -m pip install -e ".[test,image,vision,browser,security]"
+      - name: Generate React sample
+        run: python -m designatio.cli init --name "CI App" --platform web --stack react --output output/project.json && python -m designatio.cli render-react output/project.json --output output/react
+      - name: Build React sample
+        run: cd output/react && npm install && npm run build
+
+  rust-build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Generate egui sample
+        run: python -m pip install -e ".[test]" && python -m designatio.cli init --name "CI Rust" --platform desktop --stack egui --output output/project.json && python -m designatio.cli render-native egui output/project.json --output output/egui
+      - name: Cargo check
+        run: cd output/egui && cargo check

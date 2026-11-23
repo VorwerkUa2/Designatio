@@ -22,6 +22,7 @@ from designatio.plugin_marketplace import create_marketplace_entry
 from designatio.trust_store import TrustStore
 from designatio.preview_host import start_preview_server, stop_preview_server
 from designatio.platform import python_executable, npm_executable, tesseract_executable
+from designatio.mnemosyne_bridge import build_mnemosyne_mcp_config, create_mnemosyne_preview_manifest
 from designatio.engine_manifest import export_engine_manifest
 from designatio.publish import create_mnemosyne_handoff
 from designatio.native_renderers import render_native
@@ -471,6 +472,20 @@ def test_platform_helpers_resolve_cross_platform_executables() -> None:
     assert npm_executable() is None or isinstance(npm_executable(), str)
     discovered = tesseract_executable()
     assert discovered is None or isinstance(discovered, str)
+
+
+def test_mnemosyne_bridge_contract(tmp_path: Path) -> None:
+    project = create_project("Mnemosyne app")
+    preview = tmp_path / "preview"
+    preview.mkdir()
+    (preview / "index.html").write_text("<h1>Preview</h1>", encoding="utf-8")
+
+    config = build_mnemosyne_mcp_config(tmp_path)
+    manifest = create_mnemosyne_preview_manifest(preview, project)
+
+    assert Path(config["config"]).is_file()
+    assert config["mcpConfig"]["mcpServers"]["designatio"]["args"] == ["-m", "designatio.mcp.server"]
+    assert manifest["preview"]["entry"].endswith("index.html")
 
 
 def test_plugin_bundle_rejects_traversal(tmp_path: Path) -> None:

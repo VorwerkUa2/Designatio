@@ -23,6 +23,7 @@ from .build_validation import validate_source
 from .plugin_bundle import create_plugin_bundle, inspect_plugin_bundle
 from .shader_validation import validate_shader
 from .plugin_marketplace import create_marketplace_entry
+from .mnemosyne_bridge import build_mnemosyne_mcp_config, create_mnemosyne_preview_manifest
 from .trust_store import TrustStore
 from .preview_host import start_preview_server, stop_preview_server
 from .publish import github_create_pr, github_create_issue
@@ -148,6 +149,13 @@ def build_parser() -> argparse.ArgumentParser:
     issue.add_argument("title")
     issue.add_argument("--body", default="")
     issue.add_argument("--label", action="append", default=[])
+
+    mnemosyne_mcp = subparsers.add_parser("mnemosyne-mcp-config")
+    mnemosyne_mcp.add_argument("project_dir")
+
+    mnemosyne_manifest = subparsers.add_parser("mnemosyne-preview-manifest")
+    mnemosyne_manifest.add_argument("project")
+    mnemosyne_manifest.add_argument("preview")
 
     trust = subparsers.add_parser("trust-key")
     trust.add_argument("name")
@@ -334,6 +342,15 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "github-issue":
         print(json.dumps(github_create_issue(args.repo, args.title, args.body, args.label), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "mnemosyne-mcp-config":
+        print(json.dumps(build_mnemosyne_mcp_config(args.project_dir), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "mnemosyne-preview-manifest":
+        project = load_project(args.project)
+        print(json.dumps(create_mnemosyne_preview_manifest(args.preview, project), ensure_ascii=False, indent=2))
         return 0
 
     if args.command == "trust-key":

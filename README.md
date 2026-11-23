@@ -121,6 +121,8 @@ MCP tools:
 - `design_trust_key`
 - `design_preview_host`
 - `design_sandbox_policy`
+- `design_mnemosyne_mcp_config`
+- `design_mnemosyne_preview_manifest`
 
 ## Finalized first roadmap set
 

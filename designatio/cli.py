@@ -9,6 +9,7 @@ from .mockup import analyze_mockup
 from .renderers import render_html
 from .router import route_task
 from .validation import check_accessibility, check_responsive
+from .visual import take_screenshots, compare_images
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,6 +37,15 @@ def build_parser() -> argparse.ArgumentParser:
     validate = subparsers.add_parser("validate")
     validate.add_argument("project")
     validate.add_argument("--output", default="output/validation.json")
+
+    screenshot = subparsers.add_parser("screenshot")
+    screenshot.add_argument("target")
+    screenshot.add_argument("--output", default="output/screens")
+
+    compare = subparsers.add_parser("compare")
+    compare.add_argument("reference")
+    compare.add_argument("rendered")
+    compare.add_argument("--output", default="output/comparison")
 
     return parser
 
@@ -81,6 +91,16 @@ def main(argv: list[str] | None = None) -> int:
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         print(output)
+        return 0
+
+    if args.command == "screenshot":
+        report = take_screenshots(args.target, args.output)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "compare":
+        report = compare_images(args.reference, args.rendered, args.output)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0
 
     return 2

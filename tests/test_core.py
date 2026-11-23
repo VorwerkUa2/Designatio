@@ -6,6 +6,7 @@ from designatio.mockup import analyze_mockup
 from designatio.renderers import render_html
 from designatio.router import route_task
 from designatio.validation import check_accessibility, check_responsive
+from designatio.visual import compare_images
 
 
 def test_project_roundtrip(tmp_path: Path) -> None:
@@ -68,3 +69,18 @@ def test_validation_reports(tmp_path: Path) -> None:
 
     assert accessibility["passed"] is True
     assert responsive["passed"] is True
+
+
+def test_visual_diff(tmp_path: Path) -> None:
+    from PIL import Image
+
+    reference = tmp_path / "reference.png"
+    rendered = tmp_path / "rendered.png"
+    Image.new("RGB", (20, 10), "#FFFFFF").save(reference)
+    Image.new("RGB", (20, 10), "#000000").save(rendered)
+
+    report = compare_images(reference, rendered, tmp_path / "comparison")
+
+    assert report["differentPixels"] == 200
+    assert report["differenceRatio"] == 1.0
+    assert (tmp_path / "comparison" / "diff.png").is_file()

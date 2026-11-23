@@ -12,6 +12,7 @@ dependencies = []
 [project.optional-dependencies]
 image = ["Pillow>=10.0"]
 test = ["pytest>=8.0"]
+browser = ["playwright>=1.50"]
 
 [project.scripts]
 designatio = "designatio.cli:main"

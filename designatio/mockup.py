@@ -49,6 +49,7 @@ def image_metadata(path: str | Path) -> dict[str, Any]:
 
 
 def analyze_mockup(path: str | Path, mode: str = "modernized") -> dict[str, Any]:
+    source = Path(path)
     metadata = image_metadata(path)
     width = metadata.get("width")
     height = metadata.get("height")
@@ -59,6 +60,18 @@ def analyze_mockup(path: str | Path, mode: str = "modernized") -> dict[str, Any]
     if width and height and width < 390:
         issues.append({"severity": "low", "rule": "source-width", "message": "Source mockup is narrower than a standard mobile layout"})
 
+    palette: list[str] = []
+    try:
+        from PIL import Image
+
+        with Image.open(source) as image:
+            rgb = image.convert("RGB")
+            sampled = rgb.resize((64, 64))
+            palette = [f"#{red:02X}{green:02X}{blue:02X}" for red, green, blue in sampled.quantize(colors=8).getpalette()[:24]]
+            palette = list(dict.fromkeys(palette))
+    except (ImportError, OSError, ValueError):
+        pass
+
     return {
         "source": metadata,
         "mode": mode,
@@ -66,7 +79,7 @@ def analyze_mockup(path: str | Path, mode: str = "modernized") -> dict[str, Any]
             "layout": "unknown",
             "components": [],
             "typography": "requires image OCR/layout detection",
-            "colors": "requires pixel sampling",
+            "colors": palette,
         },
         "issues": issues,
         "nextActions": [

@@ -15,6 +15,8 @@ Designatio routes design tasks to focused skills, validates results, and renders
 
 ## Installation
 
+py -m designatio.cli screenshot output/site/index.html --output output/screens
+py -m designatio.cli compare output/mockup.png output/screens/desktop.png --output output/comparison
 ```powershell
 cd C:\Users\knyaz\Desktop\Designatio
 py -m pip install -e ".[test,image]"

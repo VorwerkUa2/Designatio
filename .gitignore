@@ -7,6 +7,8 @@ output/
 dist/
 build/
 *.egg-info/
+.pytest_cache/
+__pycache__/
 *.png
 *.jpg
 *.jpeg

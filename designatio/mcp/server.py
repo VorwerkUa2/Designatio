@@ -10,6 +10,7 @@ from ..mockup import analyze_mockup
 from ..renderers import render_html
 from ..router import route_task
 from ..validation import check_accessibility, check_responsive
+from ..visual import take_screenshots, compare_images
 
 
 TOOLS = [
@@ -85,6 +86,28 @@ TOOLS = [
         "description": "Route a natural-language design request to one or more skills.",
         "inputSchema": {"type": "object", "properties": {"prompt": {"type": "string"}}, "required": ["prompt"]},
     },
+    {
+        "name": "design_take_screenshots",
+        "description": "Render an HTML preview in Chromium and capture desktop, tablet and mobile screenshots.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"target": {"type": "string"}, "outputDir": {"type": "string"}},
+            "required": ["target", "outputDir"],
+        },
+    },
+    {
+        "name": "design_compare",
+        "description": "Compare a mockup against a rendered screenshot and create a visual diff.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "reference": {"type": "string"},
+                "rendered": {"type": "string"},
+                "outputDir": {"type": "string"},
+            },
+            "required": ["reference", "rendered", "outputDir"],
+        },
+    },
 ]
 
 
@@ -140,6 +163,12 @@ def execute(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
 
     if name == "design_route":
         return result(route_task(arguments["prompt"]))
+
+    if name == "design_take_screenshots":
+        return result(take_screenshots(arguments["target"], arguments["outputDir"]))
+
+    if name == "design_compare":
+        return result(compare_images(arguments["reference"], arguments["rendered"], arguments["outputDir"]))
 
     raise ValueError(f"Unknown tool: {name}")
 

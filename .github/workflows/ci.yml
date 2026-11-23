@@ -64,3 +64,38 @@ jobs:
         run: python -m pip install -e ".[test]" && python -m designatio.cli init --name "CI Rust" --platform desktop --stack egui --output output/project.json && python -m designatio.cli render-native egui output/project.json --output output/egui
       - name: Cargo check
         run: cd output/egui && cargo check
+
+  flutter-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Designatio
+        run: python -m pip install -e ".[test]"
+      - name: Generate Flutter sample
+        run: python -m designatio.cli init --name "CI Flutter" --platform mobile --stack flutter --output output/project.json && python -m designatio.cli render-native flutter output/project.json --output output/flutter
+      - name: Flutter analyze
+        run: cd output/flutter && flutter analyze
+
+  android-compose-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Designatio
+        run: python -m pip install -e ".[test]"
+      - name: Validate compose scaffold contract
+        run: python -m designatio.cli init --name "CI Compose" --platform mobile --stack compose --output output/project.json && python -m designatio.cli render-native compose output/project.json --output output/compose && test -f output/compose/DesignatioScreen.kt

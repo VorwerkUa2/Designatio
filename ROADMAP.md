@@ -31,6 +31,9 @@
 - Loopback preview host and Mnemosyne handoff
 - Ed25519 trust store and key revocation
 - Windows/Linux CI matrix
+- Native SDK CI matrix entries for React, Rust, Flutter and Compose
+- OS sandbox backend detection
+- Hosted marketplace index validation
 - Real Mnemosyne MCP config and preview manifest bridge
 - Mnemosyne preview handoff
 - Accessibility and responsive reports

@@ -23,6 +23,11 @@ from designatio.trust_store import TrustStore
 from designatio.preview_host import start_preview_server, stop_preview_server
 from designatio.platform import python_executable, npm_executable, tesseract_executable
 from designatio.mnemosyne_bridge import build_mnemosyne_mcp_config, create_mnemosyne_preview_manifest
+from designatio.os_sandbox import detect_os_sandbox
+from designatio.toolchain_matrix import inspect_toolchain_matrix
+from designatio.hosted_marketplace import validate_hosted_entry, create_hosted_index
+from designatio.os_sandbox import detect_os_sandbox, validate_sandbox_backend
+from designatio.toolchain_matrix import inspect_toolchain_matrix
 from designatio.engine_manifest import export_engine_manifest
 from designatio.publish import create_mnemosyne_handoff
 from designatio.native_renderers import render_native
@@ -472,6 +477,34 @@ def test_platform_helpers_resolve_cross_platform_executables() -> None:
     assert npm_executable() is None or isinstance(npm_executable(), str)
     discovered = tesseract_executable()
     assert discovered is None or isinstance(discovered, str)
+
+
+def test_os_sandbox_and_toolchain_detection() -> None:
+    sandbox = detect_os_sandbox()
+    toolchains = inspect_toolchain_matrix()
+
+    assert sandbox["platform"] in {"nt", "posix"}
+    assert isinstance(sandbox["candidates"], list)
+    assert toolchains["toolchains"]
+    assert validate_sandbox_backend("unknown")["available"] is False
+
+
+def test_hosted_marketplace_validation_and_index(tmp_path: Path) -> None:
+    entry = {
+        "name": "region-qa",
+        "version": "1.0.0",
+        "target": "security",
+        "entry": "entry.json",
+        "bundle": "region-qa.dsgzip",
+        "platforms": ["windows", "linux"],
+    }
+
+    validation = validate_hosted_entry(entry)
+    index = create_hosted_index([entry], tmp_path / "marketplace.json")
+
+    assert validation["passed"] is True
+    assert index["count"] == 1
+    assert (tmp_path / "marketplace.json").is_file()
 
 
 def test_mnemosyne_bridge_contract(tmp_path: Path) -> None:

@@ -118,6 +118,9 @@ MCP tools:
 - `design_plugin_marketplace`
 - `design_github_pr`
 - `design_github_issue`
+- `design_sandbox_status`
+- `design_toolchains`
+- `design_hosted_marketplace`
 - `design_trust_key`
 - `design_preview_host`
 - `design_sandbox_policy`

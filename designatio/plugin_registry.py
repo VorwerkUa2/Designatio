@@ -171,7 +171,7 @@ class PluginRegistry:
         return {
             "level": "bounded-process-mvp",
             "filesystem": "Entry and sandboxRoot must remain inside the plugin directory",
-            "network": "Not explicitly isolated by this MVP",
+            "network": "Not explicitly isolated until an OS/container backend is active",
             "processTimeoutSeconds": 10,
             "allowedTargets": ["react", "flutter", "swiftui", "compose", "egui", "tauri", "html", "texture", "security"],
             "allowedEntries": [".json", ".py"],

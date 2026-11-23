@@ -24,6 +24,9 @@ from .plugin_bundle import create_plugin_bundle, inspect_plugin_bundle
 from .shader_validation import validate_shader
 from .plugin_marketplace import create_marketplace_entry
 from .mnemosyne_bridge import build_mnemosyne_mcp_config, create_mnemosyne_preview_manifest
+from .os_sandbox import detect_os_sandbox, validate_sandbox_backend
+from .toolchain_matrix import inspect_toolchain_matrix
+from .hosted_marketplace import validate_hosted_entry, create_hosted_index
 from .trust_store import TrustStore
 from .preview_host import start_preview_server, stop_preview_server
 from .publish import github_create_pr, github_create_issue
@@ -156,6 +159,14 @@ def build_parser() -> argparse.ArgumentParser:
     mnemosyne_manifest = subparsers.add_parser("mnemosyne-preview-manifest")
     mnemosyne_manifest.add_argument("project")
     mnemosyne_manifest.add_argument("preview")
+
+    sandbox = subparsers.add_parser("sandbox-status")
+
+    toolchains = subparsers.add_parser("toolchains")
+
+    marketplace = subparsers.add_parser("hosted-marketplace")
+    marketplace.add_argument("entries")
+    marketplace.add_argument("--output", default="output/hosted-marketplace.json")
 
     trust = subparsers.add_parser("trust-key")
     trust.add_argument("name")
@@ -351,6 +362,20 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "mnemosyne-preview-manifest":
         project = load_project(args.project)
         print(json.dumps(create_mnemosyne_preview_manifest(args.preview, project), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "sandbox-status":
+        print(json.dumps(detect_os_sandbox(), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "toolchains":
+        print(json.dumps(inspect_toolchain_matrix(), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "hosted-marketplace":
+        entries = json.loads(Path(args.entries).read_text(encoding="utf-8-sig"))
+        report = create_hosted_index(entries, args.output)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0
 
     if args.command == "trust-key":

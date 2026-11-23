@@ -27,6 +27,7 @@ from designatio.os_sandbox import detect_os_sandbox
 from designatio.toolchain_matrix import inspect_toolchain_matrix
 from designatio.hosted_marketplace import start_marketplace_server, stop_marketplace_server
 from designatio.os_sandbox import build_sandbox_command
+from designatio.orchestrator import doctor, run_all
 from designatio.hosted_marketplace import validate_hosted_entry, create_hosted_index
 from designatio.os_sandbox import detect_os_sandbox, validate_sandbox_backend
 from designatio.toolchain_matrix import inspect_toolchain_matrix
@@ -528,6 +529,16 @@ def test_sandbox_command_builder(tmp_path: Path) -> None:
 
     assert report["backend"] == "bounded"
     assert report["command"][-1].endswith("entry.json")
+
+
+def test_doctor_and_automated_run(tmp_path: Path) -> None:
+    report = doctor()
+    run_report = run_all(None, "Test automation", tmp_path / "automated")
+
+    assert report["python"]["executable"]
+    assert "toolchains" in report
+    assert (tmp_path / "automated" / "project.json").is_file()
+    assert "run-report" in str(run_report["report"])
 
 
 def test_mnemosyne_bridge_contract(tmp_path: Path) -> None:

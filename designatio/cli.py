@@ -34,6 +34,7 @@ from .preview_host import start_preview_server, stop_preview_server
 from .publish import github_create_pr, github_create_issue
 from .visual import inspect_preview
 from .plugin_registry import PluginRegistry
+from .orchestrator import doctor, run_all
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -191,6 +192,13 @@ def build_parser() -> argparse.ArgumentParser:
     preview.add_argument("directory")
     preview.add_argument("--port", type=int, default=4173)
     preview.add_argument("--stop", action="store_true")
+
+    doctor_parser = subparsers.add_parser("doctor")
+
+    run_auto = subparsers.add_parser("run-all")
+    run_auto.add_argument("--mockup")
+    run_auto.add_argument("--name", default="Automated Design")
+    run_auto.add_argument("--output", default="output/automated")
 
     return parser
 
@@ -397,6 +405,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "sandbox-command":
         print(json.dumps(build_sandbox_command(args.entry, {}, args.backend), ensure_ascii=False, indent=2))
         return 0
+
+    if args.command == "doctor":
+        print(json.dumps(doctor(), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "run-all":
+        report = run_all(args.mockup, args.name, args.output)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0 if report["passed"] else 1
 
     if args.command == "trust-key":
         store = TrustStore(args.store)

@@ -21,3 +21,5 @@ else
 fi
 
 echo "Designatio installation complete."
+echo "Run: designatio-doctor"
+echo "Run: designatio-run --name 'My Product' --output output/automated"

@@ -30,6 +30,13 @@ cd /path/to/Designatio
 ./install.sh
 ```
 
+## Automated one-command workflow
+
+```powershell
+designatio-doctor
+designatio-run --mockup C:\path\to\mockup.png --name "My Product" --output output\automated
+```
+
 ## Run the complete pipeline
 
 ```powershell

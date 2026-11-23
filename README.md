@@ -67,6 +67,8 @@ python -m designatio.cli render output/project.json --output output/site
 python -m designatio.cli render-react output/project.json --output output/react
 python -m designatio.cli route "Create a responsive React dashboard"
 python -m designatio.cli pipeline mockup.png --name "CRM Dashboard" --output output/pipeline
+designatio-doctor
+designatio-run --mockup mockup.png --name "CRM Dashboard" --output output/automated
 python -m designatio.cli catalog
 python -m designatio.cli catalog --language swift
 python -m designatio.cli resolve-stack "Create a native C++ Qt app with OpenGL"

@@ -12,13 +12,18 @@ BREAKPOINTS = (1440, 1024, 768, 390)
 async def take_screenshots_async(target: str | Path, output_dir: str | Path) -> dict:
     from playwright.async_api import async_playwright
 
-    target_path = Path(target).resolve()
-    if not target_path.exists():
-        raise FileNotFoundError(f"Preview target not found: {target_path}")
+    target_text = str(target)
+    if target_text.startswith("http://") or target_text.startswith("https://"):
+        url = target_text
+        target_path = None
+    else:
+        target_path = Path(target).resolve()
+        if not target_path.exists():
+            raise FileNotFoundError(f"Preview target not found: {target_path}")
+        url = target_path.as_uri() if target_path.is_file() else target_path.as_posix()
 
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
-    url = target_path.as_uri() if target_path.is_file() else target_path.as_posix()
     screenshots: dict[str, str] = {}
 
     async with async_playwright() as playwright:
@@ -31,7 +36,11 @@ async def take_screenshots_async(target: str | Path, output_dir: str | Path) -> 
             await page.close()
         await browser.close()
 
-    return {"screenshots": screenshots, "target": str(target_path), "breakpoints": list(BREAKPOINTS)}
+    return {
+        "screenshots": screenshots,
+        "target": url,
+        "breakpoints": list(BREAKPOINTS),
+    }
 
 
 def take_screenshots(target: str | Path, output_dir: str | Path) -> dict:
@@ -41,10 +50,14 @@ def take_screenshots(target: str | Path, output_dir: str | Path) -> dict:
 async def inspect_preview_async(target: str | Path) -> dict:
     from playwright.async_api import async_playwright
 
-    target_path = Path(target).resolve()
-    if not target_path.exists():
-        raise FileNotFoundError(f"Preview target not found: {target_path}")
-    url = target_path.as_uri() if target_path.is_file() else target_path.as_posix()
+    target_text = str(target)
+    if target_text.startswith("http://") or target_text.startswith("https://"):
+        url = target_text
+    else:
+        target_path = Path(target).resolve()
+        if not target_path.exists():
+            raise FileNotFoundError(f"Preview target not found: {target_path}")
+        url = target_path.as_uri() if target_path.is_file() else target_path.as_posix()
 
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(headless=True)

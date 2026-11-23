@@ -33,6 +33,7 @@ from ..publish import github_create_pr, github_create_issue
 from ..trust_store import TrustStore
 from ..preview_host import start_preview_server, stop_preview_server
 from ..plugin_registry import PluginRegistry
+from ..orchestrator import doctor, run_all
 
 
 TOOLS = [
@@ -344,6 +345,16 @@ TOOLS = [
         "description": "Build an OS/container sandbox command for a signed plugin entry.",
         "inputSchema": {"type": "object", "properties": {"entry": {"type": "string"}, "backend": {"type": "string"}, "payload": {"type": "object"}}, "required": ["entry"]},
     },
+    {
+        "name": "design_doctor",
+        "description": "Inspect Python, native toolchains and sandbox availability.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "design_run_all",
+        "description": "Run automated project generation, React build, screenshots and QA.",
+        "inputSchema": {"type": "object", "properties": {"mockup": {"type": "string"}, "name": {"type": "string"}, "outputDir": {"type": "string"}}},
+    },
 ]
 
 
@@ -552,6 +563,16 @@ def execute(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
 
     if name == "design_sandbox_command":
         return result(build_sandbox_command(arguments["entry"], arguments.get("payload", {}), arguments.get("backend")))
+
+    if name == "design_doctor":
+        return result(doctor())
+
+    if name == "design_run_all":
+        return result(run_all(
+            arguments.get("mockup"),
+            arguments.get("name", "Automated Design"),
+            arguments.get("outputDir", "output/automated"),
+        ))
 
     if name == "design_trust_key":
         store = TrustStore(arguments.get("storeDir", "output/trust"))

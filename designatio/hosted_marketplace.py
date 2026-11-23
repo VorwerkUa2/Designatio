@@ -7,6 +7,8 @@ import re
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from functools import partial
 import threading
+import socket
+import time
 
 
 NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{1,63}$")
@@ -59,6 +61,12 @@ def start_marketplace_server(directory: str | Path, port: int = 4174) -> dict[st
     thread = threading.Thread(target=server.serve_forever, name=f"designatio-marketplace-{port}", daemon=True)
     thread.start()
     MARKETPLACE_SERVERS[port] = server
+    for _ in range(30):
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.1):
+                break
+        except OSError:
+            time.sleep(0.05)
     return {"running": True, "port": port, "url": f"http://127.0.0.1:{port}", "directory": str(root)}
 
 

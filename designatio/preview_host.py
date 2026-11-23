@@ -5,6 +5,8 @@ from typing import Any
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from functools import partial
 import threading
+import socket
+import time
 
 
 SERVERS: dict[int, ThreadingHTTPServer] = {}
@@ -24,6 +26,12 @@ def start_preview_server(preview_dir: str | Path, port: int = 4173) -> dict[str,
     thread = threading.Thread(target=server.serve_forever, name=f"designatio-preview-{port}", daemon=True)
     thread.start()
     SERVERS[port] = server
+    for _ in range(30):
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.1):
+                break
+        except OSError:
+            time.sleep(0.05)
     return {"running": True, "port": port, "url": f"http://127.0.0.1:{port}", "directory": str(root)}
 
 

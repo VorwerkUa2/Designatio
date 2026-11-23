@@ -19,6 +19,8 @@ host = ["cryptography>=43.0"]
 
 [project.scripts]
 designatio = "designatio.cli:main"
+designatio-doctor = "designatio.orchestrator:doctor_cli"
+designatio-run = "designatio.orchestrator:run_cli"
 
 [tool.setuptools.packages.find]
 include = ["designatio*"]

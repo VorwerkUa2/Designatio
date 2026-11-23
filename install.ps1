@@ -13,4 +13,6 @@ if ($env:OS -eq "Windows_NT") {
 }
 
 Write-Host "Designatio installation complete."
+Write-Host "Run: designatio-doctor"
+Write-Host "Run: designatio-run --name 'My Product' --output output\automated"
 

@@ -19,6 +19,11 @@ from .texture_pipeline import generate_seamless
 from .engine_manifest import export_engine_manifest
 from .publish import git_status, create_commit, create_mnemosyne_handoff
 from .publish import mnemosyne_launch_preview
+from .build_validation import validate_source
+from .plugin_bundle import create_plugin_bundle, inspect_plugin_bundle
+from .shader_validation import validate_shader
+from .plugin_marketplace import create_marketplace_entry
+from .publish import github_create_pr, github_create_issue
 from .visual import inspect_preview
 from .plugin_registry import PluginRegistry
 
@@ -109,6 +114,38 @@ def build_parser() -> argparse.ArgumentParser:
 
     mnemosyne_preview = subparsers.add_parser("mnemosyne-preview")
     mnemosyne_preview.add_argument("preview")
+
+    validate_build = subparsers.add_parser("validate-build")
+    validate_build.add_argument("target")
+    validate_build.add_argument("source")
+
+    bundle = subparsers.add_parser("plugin-bundle")
+    bundle.add_argument("plugin_dir")
+    bundle.add_argument("--output", required=True)
+
+    inspect_bundle = subparsers.add_parser("inspect-plugin-bundle")
+    inspect_bundle.add_argument("bundle")
+
+    shader = subparsers.add_parser("validate-shader")
+    shader.add_argument("shader")
+
+    marketplace = subparsers.add_parser("plugin-marketplace")
+    marketplace.add_argument("manifest")
+    marketplace.add_argument("bundle")
+    marketplace.add_argument("--output", default="output/marketplace")
+
+    pr = subparsers.add_parser("github-pr")
+    pr.add_argument("repo")
+    pr.add_argument("title")
+    pr.add_argument("--body", default="")
+    pr.add_argument("--base", default="")
+    pr.add_argument("--head", default="")
+
+    issue = subparsers.add_parser("github-issue")
+    issue.add_argument("repo")
+    issue.add_argument("title")
+    issue.add_argument("--body", default="")
+    issue.add_argument("--label", action="append", default=[])
 
     return parser
 
@@ -243,6 +280,45 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "mnemosyne-preview":
         print(json.dumps(mnemosyne_launch_preview(args.preview), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "validate-build":
+        print(json.dumps(validate_source(args.target, args.source), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "plugin-bundle":
+        print(json.dumps(create_plugin_bundle(args.plugin_dir, args.output), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "inspect-plugin-bundle":
+        print(json.dumps(inspect_plugin_bundle(args.bundle), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "validate-shader":
+        shader_path = Path(args.shader)
+        if not shader_path.is_file():
+            print(json.dumps({
+                "passed": False,
+                "status": "not-found",
+                "stage": shader_path.suffix.lower().lstrip("."),
+                "shader": str(shader_path.resolve()),
+                "error": "Shader not found",
+            }, ensure_ascii=False, indent=2))
+            return 1
+        print(json.dumps(validate_shader(shader_path), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "plugin-marketplace":
+        manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8-sig"))
+        print(json.dumps(create_marketplace_entry(manifest, args.bundle, args.output), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "github-pr":
+        print(json.dumps(github_create_pr(args.repo, args.title, args.body, args.base, args.head), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "github-issue":
+        print(json.dumps(github_create_issue(args.repo, args.title, args.body, args.label), ensure_ascii=False, indent=2))
         return 0
 
     return 2

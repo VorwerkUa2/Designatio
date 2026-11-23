@@ -103,6 +103,13 @@ MCP tools:
 - `design_github_status`
 - `design_github_release`
 - `design_mnemosyne_preview`
+- `design_validate_build`
+- `design_plugin_bundle`
+- `design_compare_regions`
+- `design_validate_shader`
+- `design_plugin_marketplace`
+- `design_github_pr`
+- `design_github_issue`
 
 ## Finalized first roadmap set
 

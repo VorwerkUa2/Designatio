@@ -19,6 +19,11 @@ from ..design_mappings import export_tailwind
 from ..texture_pipeline import generate_seamless
 from ..engine_manifest import export_engine_manifest
 from ..publish import git_status, create_commit, create_mnemosyne_handoff, push_repository, github_status, github_create_release, mnemosyne_launch_preview
+from ..build_validation import validate_source
+from ..plugin_bundle import create_plugin_bundle, inspect_plugin_bundle
+from ..shader_validation import validate_shader
+from ..plugin_marketplace import create_marketplace_entry
+from ..publish import github_create_pr, github_create_issue
 from ..plugin_registry import PluginRegistry
 
 
@@ -251,6 +256,36 @@ TOOLS = [
         "description": "Create a Mnemosyne preview handoff for a generated preview directory.",
         "inputSchema": {"type": "object", "properties": {"previewDir": {"type": "string"}}, "required": ["previewDir"]},
     },
+    {
+        "name": "design_validate_build",
+        "description": "Validate generated source with the installed toolchain or report an explicit unavailable status.",
+        "inputSchema": {"type": "object", "properties": {"target": {"type": "string"}, "sourceDir": {"type": "string"}}, "required": ["target", "sourceDir"]},
+    },
+    {
+        "name": "design_plugin_bundle",
+        "description": "Create or inspect an offline Designatio plugin bundle.",
+        "inputSchema": {"type": "object", "properties": {"action": {"type": "string", "enum": ["create", "inspect"]}, "pluginDir": {"type": "string"}, "bundle": {"type": "string"}}, "required": ["action"]},
+    },
+    {
+        "name": "design_validate_shader",
+        "description": "Validate a shader with a local registered toolchain or report an explicit unavailable status.",
+        "inputSchema": {"type": "object", "properties": {"shader": {"type": "string"}}, "required": ["shader"]},
+    },
+    {
+        "name": "design_plugin_marketplace",
+        "description": "Create a machine-readable offline plugin marketplace entry.",
+        "inputSchema": {"type": "object", "properties": {"manifest": {"type": "object"}, "bundle": {"type": "string"}, "outputDir": {"type": "string"}}, "required": ["manifest", "bundle", "outputDir"]},
+    },
+    {
+        "name": "design_github_pr",
+        "description": "Create a GitHub pull request in a local repository.",
+        "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}, "title": {"type": "string"}, "body": {"type": "string"}, "base": {"type": "string"}, "head": {"type": "string"}}, "required": ["repo", "title"]},
+    },
+    {
+        "name": "design_github_issue",
+        "description": "Create a GitHub issue in a local repository.",
+        "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}, "title": {"type": "string"}, "body": {"type": "string"}, "labels": {"type": "array", "items": {"type": "string"}}}, "required": ["repo", "title"]},
+    },
 ]
 
 
@@ -408,6 +443,32 @@ def execute(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
 
     if name == "design_mnemosyne_preview":
         return result(mnemosyne_launch_preview(arguments["previewDir"]))
+
+    if name == "design_validate_build":
+        return result(validate_source(arguments["target"], arguments["sourceDir"]))
+
+    if name == "design_plugin_bundle":
+        if arguments["action"] == "create":
+            if not arguments.get("pluginDir") or not arguments.get("bundle"):
+                raise ValueError("Create action requires pluginDir and bundle")
+            return result(create_plugin_bundle(arguments["pluginDir"], arguments["bundle"]))
+        if arguments["action"] == "inspect":
+            if not arguments.get("bundle"):
+                raise ValueError("Inspect action requires bundle")
+            return result(inspect_plugin_bundle(arguments["bundle"]))
+        raise ValueError("Unsupported plugin bundle action")
+
+    if name == "design_validate_shader":
+        return result(validate_shader(arguments["shader"]))
+
+    if name == "design_plugin_marketplace":
+        return result(create_marketplace_entry(arguments["manifest"], arguments["bundle"], arguments["outputDir"]))
+
+    if name == "design_github_pr":
+        return result(github_create_pr(arguments["repo"], arguments["title"], arguments.get("body", ""), arguments.get("base", ""), arguments.get("head", "")))
+
+    if name == "design_github_issue":
+        return result(github_create_issue(arguments["repo"], arguments["title"], arguments.get("body", ""), arguments.get("labels", [])))
 
     raise ValueError(f"Unknown tool: {name}")
 

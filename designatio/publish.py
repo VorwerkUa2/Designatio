@@ -100,6 +100,30 @@ def github_create_release(repo: str | Path, tag: str, title: str, notes: str = "
     return {"passed": result.returncode == 0, "output": result.stdout, "error": result.stderr}
 
 
+def github_create_pr(repo: str | Path, title: str, body: str = "", base: str = "", head: str = "") -> dict[str, Any]:
+    repo_path = Path(repo)
+    args = ["gh", "pr", "create", "--title", title]
+    if body:
+        args.extend(["--body", body])
+    if base:
+        args.extend(["--base", base])
+    if head:
+        args.extend(["--head", head])
+    result = subprocess.run(args, cwd=repo_path, capture_output=True, text=True, check=False)
+    return {"passed": result.returncode == 0, "output": result.stdout, "error": result.stderr}
+
+
+def github_create_issue(repo: str | Path, title: str, body: str = "", labels: list[str] | None = None) -> dict[str, Any]:
+    repo_path = Path(repo)
+    args = ["gh", "issue", "create", "--title", title]
+    if body:
+        args.extend(["--body", body])
+    for label in labels or []:
+        args.extend(["--label", label])
+    result = subprocess.run(args, cwd=repo_path, capture_output=True, text=True, check=False)
+    return {"passed": result.returncode == 0, "output": result.stdout, "error": result.stderr}
+
+
 def mnemosyne_launch_preview(preview_dir: str | Path) -> dict[str, Any]:
     preview = Path(preview_dir)
     if not preview.exists():

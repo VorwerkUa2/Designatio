@@ -15,6 +15,10 @@ from designatio.layout_analysis import merge_reading_order, detect_grid
 from designatio.design_mappings import export_tailwind, react_tailwind_source
 from designatio.texture_pipeline import generate_seamless
 from designatio.plugin_registry import PluginRegistry
+from designatio.build_validation import validate_source
+from designatio.plugin_bundle import create_plugin_bundle, inspect_plugin_bundle
+from designatio.shader_validation import validate_shader
+from designatio.plugin_marketplace import create_marketplace_entry
 from designatio.engine_manifest import export_engine_manifest
 from designatio.publish import create_mnemosyne_handoff
 from designatio.native_renderers import render_native
@@ -347,3 +351,110 @@ def test_semantic_component_actions(tmp_path: Path) -> None:
 
     assert components[0]["type"] == "header"
     assert "Create" in components[0]["actions"]
+
+
+def test_figma_variables_styles_and_auto_layout(tmp_path: Path) -> None:
+    figma = tmp_path / "advanced.json"
+    figma.write_text(json.dumps({
+        "name": "Advanced screen",
+        "variables": {"Primary": {"value": "#4F46E5"}},
+        "styles": {"Heading": {"fontFamily": "Inter"}},
+        "document": {
+            "name": "Root",
+            "type": "CANVAS",
+            "children": [{
+                "name": "Card stack",
+                "type": "FRAME",
+                "layoutMode": "VERTICAL",
+                "itemSpacing": 16,
+                "paddingTop": 24,
+                "paddingRight": 24,
+                "paddingBottom": 24,
+                "paddingLeft": 24,
+                "children": [{"name": "Title", "type": "TEXT", "characters": "Revenue"}],
+            }],
+        },
+    }), encoding="utf-8")
+
+    result = import_figma_json(figma, tmp_path / "advanced")
+
+    assert result["variables"] == 1
+    assert result["styles"] == 1
+    assert result["autoLayoutFrames"] == 1
+
+
+def test_plugin_bundle_roundtrip(tmp_path: Path) -> None:
+    plugin = tmp_path / "plugin"
+    plugin.mkdir()
+    (plugin / "manifest.json").write_text(json.dumps({
+        "name": "bundle-qa",
+        "version": "1.0.0",
+        "target": "security",
+        "entry": "entry.json",
+    }), encoding="utf-8")
+    (plugin / "entry.json").write_text(json.dumps({"mode": "read-only"}), encoding="utf-8")
+
+    created = create_plugin_bundle(plugin, tmp_path / "bundle.dsgzip")
+    inspected = inspect_plugin_bundle(created["bundle"])
+
+    assert inspected["manifest"]["name"] == "bundle-qa"
+    assert inspected["files"][0]["sha256"]
+
+
+def test_build_validation_is_honest(tmp_path: Path) -> None:
+    flutter = validate_source("flutter", tmp_path)
+    unsupported = validate_source("unknown-target", tmp_path)
+    react_missing_package = validate_source("react", tmp_path)
+
+    assert flutter["status"] == "toolchain-unavailable"
+    assert unsupported["status"] == "unsupported"
+    assert react_missing_package["status"] == "invalid-output"
+
+
+def test_shader_validation_is_honest(tmp_path: Path) -> None:
+    shader = tmp_path / "example.frag"
+    shader.write_text("void main() {}", encoding="utf-8")
+
+    report = validate_shader(shader)
+
+    assert report["stage"] == "fragment"
+    assert report["status"] in {"toolchain-unavailable", "passed", "failed"}
+
+
+def test_plugin_marketplace_entry(tmp_path: Path) -> None:
+    bundle = tmp_path / "plugin.dsgzip"
+    bundle.write_bytes(b"bundle")
+    manifest = {
+        "name": "security-qa",
+        "version": "1.0.0",
+        "target": "security",
+        "entry": "entry.json",
+        "description": "Accessibility and shader QA",
+        "platforms": ["windows", "linux"],
+    }
+
+    report = create_marketplace_entry(manifest, bundle, tmp_path / "marketplace")
+
+    assert (tmp_path / "marketplace" / "security-qa@1.0.0.json").is_file()
+    assert report["marketplace"]["platforms"] == ["windows", "linux"]
+
+
+def test_plugin_bundle_rejects_traversal(tmp_path: Path) -> None:
+    import zipfile
+
+    bundle = tmp_path / "unsafe.dsgzip"
+    with zipfile.ZipFile(bundle, "w") as archive:
+        archive.writestr("manifest.json", json.dumps({
+            "name": "unsafe",
+            "version": "1.0.0",
+            "target": "security",
+            "entry": "entry.json",
+        }))
+        archive.writestr("../entry.json", "{}")
+
+    try:
+        inspect_plugin_bundle(bundle)
+    except ValueError as error:
+        assert "Unsafe plugin bundle path" in str(error)
+    else:
+        raise AssertionError("unsafe plugin bundle traversal was accepted")

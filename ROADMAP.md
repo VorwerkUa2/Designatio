@@ -23,18 +23,19 @@
 - Ed25519 plugin signing and verification
 - Allowlist JSON/Python plugin sandbox
 - GitHub CLI repository status and release helper
+- GitHub PR and issue automation
+- Plugin bundle and offline marketplace metadata
+- Shader validation with explicit toolchain status
+- Figma Variables, Styles and AutoLayout mapping
+- React build validation and native toolchain status
 - Mnemosyne preview handoff
 - Accessibility and responsive reports
 - End-to-end mockup pipeline
 
 ## Next production stages
 
-- Public-key plugin signing and stronger sandbox boundaries
-- Real Figma Variables/Styles and components import
+- Public-key plugin signing and OS-level sandbox boundaries
 - React component inference by semantic OCR regions
 - More precise OCR-to-grid-to-component geometry
-- Rust, C++, C#, Java, Swift and Kotlin source build validation
+- Rust, C++, C#, Java, Swift and Kotlin source build execution
 - Native desktop preview embedded in Mnemosyne
-- GitHub PR/issue publishing and release automation
-- Plugin marketplace metadata and offline installation
-- GPU and shader validation

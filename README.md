@@ -29,6 +29,7 @@ py -m pip install -e ".[vision,browser]"
 py -m designatio.cli init --name "CRM Dashboard" --platform web --stack html
 py -m designatio.cli analyze mockup.png --project output/project.json
 py -m designatio.cli render output/project.json --output output/site
+py -m designatio.cli render-react output/project.json --output output/react
 py -m designatio.cli route "Create a responsive React dashboard"
 ```
 

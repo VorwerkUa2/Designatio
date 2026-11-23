@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .contracts import create_project, load_project, save_project
 from .mockup import analyze_mockup
-from .renderers import render_html
+from .renderers import render_html, render_react
 from .router import route_task
 from .validation import check_accessibility, check_responsive
 from .visual import take_screenshots, compare_images
@@ -30,6 +30,10 @@ def build_parser() -> argparse.ArgumentParser:
     render = subparsers.add_parser("render")
     render.add_argument("project")
     render.add_argument("--output", default="output/site")
+
+    render_react_parser = subparsers.add_parser("render-react")
+    render_react_parser.add_argument("project")
+    render_react_parser.add_argument("--output", default="output/react")
 
     route = subparsers.add_parser("route")
     route.add_argument("prompt")
@@ -73,6 +77,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "render":
         project = load_project(args.project)
         rendered = render_html(project, args.output)
+        output = save_project(rendered, args.project)
+        print(output)
+        return 0
+
+    if args.command == "render-react":
+        project = load_project(args.project)
+        rendered = render_react(project, args.output)
         output = save_project(rendered, args.project)
         print(output)
         return 0

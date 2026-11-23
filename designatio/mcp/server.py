@@ -7,7 +7,7 @@ from typing import Any
 
 from ..contracts import create_project, load_project, save_project
 from ..mockup import analyze_mockup
-from ..renderers import render_html
+from ..renderers import render_html, render_react
 from ..router import route_task
 from ..validation import check_accessibility, check_responsive
 from ..visual import take_screenshots, compare_images
@@ -108,6 +108,15 @@ TOOLS = [
             "required": ["reference", "rendered", "outputDir"],
         },
     },
+    {
+        "name": "design_render_react",
+        "description": "Generate a responsive Vite and React implementation from a Designatio project.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"projectPath": {"type": "string"}, "outputDir": {"type": "string"}},
+            "required": ["projectPath", "outputDir"],
+        },
+    },
 ]
 
 
@@ -169,6 +178,13 @@ def execute(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
 
     if name == "design_compare":
         return result(compare_images(arguments["reference"], arguments["rendered"], arguments["outputDir"]))
+
+    if name == "design_render_react":
+        project_path = arguments["projectPath"]
+        project = load_project(project_path)
+        rendered = render_react(project, arguments["outputDir"])
+        save_project(rendered, project_path)
+        return result(rendered["preview"])
 
     raise ValueError(f"Unknown tool: {name}")
 

@@ -9,6 +9,7 @@ build/
 *.egg-info/
 .pytest_cache/
 __pycache__/
+node_modules/
 *.png
 *.jpg
 *.jpeg

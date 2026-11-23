@@ -3,7 +3,7 @@ from pathlib import Path
 
 from designatio.contracts import create_project, load_project, save_project
 from designatio.mockup import analyze_mockup
-from designatio.renderers import render_html
+from designatio.renderers import render_html, render_react
 from designatio.router import route_task
 from designatio.validation import check_accessibility, check_responsive
 from designatio.visual import compare_images
@@ -97,3 +97,20 @@ def test_mockup_layout_has_machine_readable_result(tmp_path: Path) -> None:
     assert "detected" in result
     assert "visionAvailable" in result["detected"]
     assert isinstance(result["detected"]["zones"], list)
+
+
+def test_react_renderer(tmp_path: Path) -> None:
+    project = create_project("CRM Dashboard", "web", "react")
+    project["components"] = [
+        {"type": "header", "title": "CRM Dashboard", "description": "Overview"},
+        {"type": "card", "title": "Users", "description": "1,200"},
+    ]
+
+    rendered = render_react(project, tmp_path)
+
+    app = (tmp_path / "src" / "App.jsx").read_text(encoding="utf-8")
+    css = (tmp_path / "src" / "App.css").read_text(encoding="utf-8")
+    assert "CRM Dashboard" in app
+    assert "Users" in app
+    assert "@media (max-width: 768px)" in css
+    assert rendered["preview"]["breakpoints"] == [1440, 1024, 768, 390]

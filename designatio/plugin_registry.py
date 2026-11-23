@@ -162,3 +162,14 @@ class PluginRegistry:
             "stdout": result.stdout[-4000:],
             "stderr": result.stderr[-4000:],
         }
+
+    def sandbox_policy(self) -> dict[str, Any]:
+        return {
+            "level": "bounded-process-mvp",
+            "filesystem": "Entry and sandboxRoot must remain inside the plugin directory",
+            "network": "Not explicitly isolated by this MVP",
+            "processTimeoutSeconds": 10,
+            "allowedTargets": ["react", "flutter", "swiftui", "compose", "egui", "tauri", "html", "texture", "security"],
+            "allowedEntries": [".json", ".py"],
+            "osIsolation": "not-provided",
+        }

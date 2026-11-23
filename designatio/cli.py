@@ -23,6 +23,8 @@ from .build_validation import validate_source
 from .plugin_bundle import create_plugin_bundle, inspect_plugin_bundle
 from .shader_validation import validate_shader
 from .plugin_marketplace import create_marketplace_entry
+from .trust_store import TrustStore
+from .preview_host import start_preview_server, stop_preview_server
 from .publish import github_create_pr, github_create_issue
 from .visual import inspect_preview
 from .plugin_registry import PluginRegistry
@@ -146,6 +148,19 @@ def build_parser() -> argparse.ArgumentParser:
     issue.add_argument("title")
     issue.add_argument("--body", default="")
     issue.add_argument("--label", action="append", default=[])
+
+    trust = subparsers.add_parser("trust-key")
+    trust.add_argument("name")
+    trust.add_argument("public_key")
+    trust.add_argument("--store", default="output/trust")
+
+    trust_list = subparsers.add_parser("trust-list")
+    trust_list.add_argument("--store", default="output/trust")
+
+    preview = subparsers.add_parser("preview-host")
+    preview.add_argument("directory")
+    preview.add_argument("--port", type=int, default=4173)
+    preview.add_argument("--stop", action="store_true")
 
     return parser
 
@@ -319,6 +334,20 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "github-issue":
         print(json.dumps(github_create_issue(args.repo, args.title, args.body, args.label), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "trust-key":
+        store = TrustStore(args.store)
+        print(json.dumps(store.add_public_key(args.name, args.public_key), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "trust-list":
+        print(json.dumps(TrustStore(args.store).list(), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "preview-host":
+        report = stop_preview_server(args.port) if args.stop else start_preview_server(args.directory, args.port)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0
 
     return 2

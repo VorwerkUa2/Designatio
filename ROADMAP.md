@@ -28,6 +28,9 @@
 - Shader validation with explicit toolchain status
 - Figma Variables, Styles and AutoLayout mapping
 - React build validation and native toolchain status
+- Loopback preview host and Mnemosyne handoff
+- Ed25519 trust store and key revocation
+- Windows/Linux CI matrix
 - Mnemosyne preview handoff
 - Accessibility and responsive reports
 - End-to-end mockup pipeline

@@ -110,6 +110,9 @@ MCP tools:
 - `design_plugin_marketplace`
 - `design_github_pr`
 - `design_github_issue`
+- `design_trust_key`
+- `design_preview_host`
+- `design_sandbox_policy`
 
 ## Finalized first roadmap set
 

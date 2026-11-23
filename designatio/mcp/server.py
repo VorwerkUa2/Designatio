@@ -24,6 +24,8 @@ from ..plugin_bundle import create_plugin_bundle, inspect_plugin_bundle
 from ..shader_validation import validate_shader
 from ..plugin_marketplace import create_marketplace_entry
 from ..publish import github_create_pr, github_create_issue
+from ..trust_store import TrustStore
+from ..preview_host import start_preview_server, stop_preview_server
 from ..plugin_registry import PluginRegistry
 
 
@@ -286,6 +288,21 @@ TOOLS = [
         "description": "Create a GitHub issue in a local repository.",
         "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}, "title": {"type": "string"}, "body": {"type": "string"}, "labels": {"type": "array", "items": {"type": "string"}}}, "required": ["repo", "title"]},
     },
+    {
+        "name": "design_trust_key",
+        "description": "Register an Ed25519 public key in the local trust store.",
+        "inputSchema": {"type": "object", "properties": {"name": {"type": "string"}, "publicKey": {"type": "string"}, "storeDir": {"type": "string"}}, "required": ["name", "publicKey"]},
+    },
+    {
+        "name": "design_preview_host",
+        "description": "Start or stop a localhost-only preview server.",
+        "inputSchema": {"type": "object", "properties": {"directory": {"type": "string"}, "port": {"type": "integer"}, "stop": {"type": "boolean"}}, "required": ["directory"]},
+    },
+    {
+        "name": "design_sandbox_policy",
+        "description": "Describe the actual plugin sandbox boundary and limitations.",
+        "inputSchema": {"type": "object", "properties": {"registryDir": {"type": "string"}}},
+    },
 ]
 
 
@@ -469,6 +486,19 @@ def execute(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
 
     if name == "design_github_issue":
         return result(github_create_issue(arguments["repo"], arguments["title"], arguments.get("body", ""), arguments.get("labels", [])))
+
+    if name == "design_trust_key":
+        store = TrustStore(arguments.get("storeDir", "output/trust"))
+        return result(store.add_public_key(arguments["name"], arguments["publicKey"]))
+
+    if name == "design_preview_host":
+        if arguments.get("stop", False):
+            return result(stop_preview_server(int(arguments.get("port", 4173))))
+        return result(start_preview_server(arguments["directory"], int(arguments.get("port", 4173))))
+
+    if name == "design_sandbox_policy":
+        registry = PluginRegistry(arguments.get("registryDir", "output/plugins"))
+        return result(registry.sandbox_policy())
 
     raise ValueError(f"Unknown tool: {name}")
 

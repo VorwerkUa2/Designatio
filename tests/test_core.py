@@ -19,6 +19,8 @@ from designatio.build_validation import validate_source
 from designatio.plugin_bundle import create_plugin_bundle, inspect_plugin_bundle
 from designatio.shader_validation import validate_shader
 from designatio.plugin_marketplace import create_marketplace_entry
+from designatio.trust_store import TrustStore
+from designatio.preview_host import start_preview_server, stop_preview_server
 from designatio.engine_manifest import export_engine_manifest
 from designatio.publish import create_mnemosyne_handoff
 from designatio.native_renderers import render_native
@@ -437,6 +439,30 @@ def test_plugin_marketplace_entry(tmp_path: Path) -> None:
 
     assert (tmp_path / "marketplace" / "security-qa@1.0.0.json").is_file()
     assert report["marketplace"]["platforms"] == ["windows", "linux"]
+
+
+def test_trust_store_ed25519_fingerprint(tmp_path: Path) -> None:
+    registry = PluginRegistry(tmp_path / "registry")
+    keys = registry.generate_ed25519_keypair(tmp_path / "private.pem", tmp_path / "public.pem")
+    store = TrustStore(tmp_path / "trust")
+
+    record = store.add_public_key("local-auditor", keys["public"])
+
+    assert store.verify_fingerprint("local-auditor", keys["public"]) is True
+    assert record["algorithm"] == "Ed25519"
+    assert store.revoke("local-auditor") is True
+    assert store.resolve("local-auditor") is None
+
+
+def test_loopback_preview_host(tmp_path: Path) -> None:
+    (tmp_path / "index.html").write_text("<h1>Preview</h1>", encoding="utf-8")
+
+    started = start_preview_server(tmp_path, 4199)
+    stopped = stop_preview_server(4199)
+
+    assert started["running"] is True
+    assert started["url"] == "http://127.0.0.1:4199"
+    assert stopped["running"] is False
 
 
 def test_plugin_bundle_rejects_traversal(tmp_path: Path) -> None:

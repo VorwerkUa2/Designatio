@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import sys
+import json
 
 
 def detect_os_sandbox() -> dict[str, Any]:
@@ -113,6 +114,8 @@ def build_sandbox_command(entry: str | Path, payload: dict[str, Any], backend: s
             "-I",
             str(entry_path),
         ]
+    elif chosen == "job-object" and os.name == "nt":
+        command = [sys.executable, "-I", str(entry_path)]
     else:
         command = [sys.executable, "-I", str(entry_path)]
     return {
@@ -120,4 +123,124 @@ def build_sandbox_command(entry: str | Path, payload: dict[str, Any], backend: s
         "command": command,
         "payloadEnvironment": "DESIGNATIO_PAYLOAD",
         "payload": payload,
+    }
+
+
+def execute_sandbox_command(command_report: dict[str, Any], timeout: int = 10) -> dict[str, Any]:
+    command = command_report.get("command")
+    if not isinstance(command, list) or not command:
+        raise ValueError("Sandbox command is required")
+    if os.name == "nt" and command_report.get("backend") == "job-object":
+        return run_windows_job_object(command, command_report.get("payload", {}), timeout)
+    environment = dict(os.environ)
+    environment["DESIGNATIO_PAYLOAD"] = json.dumps(command_report.get("payload", {}), ensure_ascii=False)
+    result = subprocess.run(
+        command,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        check=False,
+    )
+    return {
+        "passed": result.returncode == 0,
+        "backend": command_report.get("backend"),
+        "returnCode": result.returncode,
+        "stdout": result.stdout[-4000:],
+        "stderr": result.stderr[-4000:],
+    }
+
+
+def run_windows_job_object(command: list[str], payload: dict[str, Any], timeout: int = 10) -> dict[str, Any]:
+    if os.name != "nt":
+        return {"passed": False, "backend": "job-object", "status": "unsupported-host"}
+    try:
+        import ctypes
+        from ctypes import wintypes
+    except ImportError as error:
+        return {"passed": False, "backend": "job-object", "status": "unavailable", "error": str(error)}
+
+    class IO_COUNTERS(ctypes.Structure):
+        _fields_ = [
+            ("ReadOperationCount", ctypes.c_ulonglong),
+            ("WriteOperationCount", ctypes.c_ulonglong),
+            ("OtherOperationCount", ctypes.c_ulonglong),
+            ("ReadTransferCount", ctypes.c_ulonglong),
+            ("WriteTransferCount", ctypes.c_ulonglong),
+            ("OtherTransferCount", ctypes.c_ulonglong),
+        ]
+
+    class JOB_OBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
+        _fields_ = [
+            ("PerProcessUserTimeLimit", ctypes.c_longlong),
+            ("PerJobUserTimeLimit", ctypes.c_longlong),
+            ("LimitFlags", ctypes.c_ulong),
+            ("MinimumWorkingSetSize", ctypes.c_size_t),
+            ("MaximumWorkingSetSize", ctypes.c_size_t),
+            ("ActiveProcessLimit", ctypes.c_ulong),
+            ("Affinity", ctypes.c_size_t),
+            ("PriorityClass", ctypes.c_ulong),
+            ("SchedulingClass", ctypes.c_ulong),
+        ]
+
+    class JOB_OBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
+        _fields_ = [
+            ("BasicLimitInformation", JOB_OBJECT_BASIC_LIMIT_INFORMATION),
+            ("IoInfo", IO_COUNTERS),
+            ("ProcessMemoryLimit", ctypes.c_size_t),
+            ("JobMemoryLimit", ctypes.c_size_t),
+            ("PeakProcessMemoryUsed", ctypes.c_size_t),
+            ("PeakJobMemoryUsed", ctypes.c_size_t),
+        ]
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    job = kernel32.CreateJobObjectW(None, None)
+    if not job:
+        return {"passed": False, "backend": "job-object", "status": "create-failed", "error": ctypes.get_last_error()}
+
+    limits = JOB_OBJECT_EXTENDED_LIMIT_INFORMATION()
+    limits.BasicLimitInformation.LimitFlags = 0x00002000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+    limits.BasicLimitInformation.ActiveProcessLimit = 1
+    limits.BasicLimitInformation.LimitFlags |= 0x00000008  # JOB_OBJECT_LIMIT_ACTIVE_PROCESS
+
+    if not kernel32.SetInformationJobObject(
+        job,
+        9,  # JobObjectExtendedLimitInformation
+        ctypes.byref(limits),
+        ctypes.sizeof(limits),
+    ):
+        kernel32.CloseHandle(job)
+        return {"passed": False, "backend": "job-object", "status": "configure-failed", "error": ctypes.get_last_error()}
+
+    environment = dict(os.environ)
+    environment["DESIGNATIO_PAYLOAD"] = json.dumps(payload, ensure_ascii=False)
+    process = subprocess.Popen(
+        command,
+        env=environment,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    process_handle = process._handle
+    if not kernel32.AssignProcessToJobObject(job, process_handle):
+        process.terminate()
+        kernel32.CloseHandle(job)
+        return {"passed": False, "backend": "job-object", "status": "assign-failed", "error": ctypes.get_last_error()}
+
+    try:
+        stdout, stderr = process.communicate(timeout=timeout)
+        passed = process.returncode == 0
+    except subprocess.TimeoutExpired:
+        kernel32.TerminateJobObject(job, 1)
+        stdout, stderr = process.communicate(timeout=5)
+        passed = False
+    finally:
+        kernel32.CloseHandle(job)
+
+    return {
+        "passed": passed,
+        "backend": "job-object",
+        "returnCode": process.returncode,
+        "stdout": stdout[-4000:] if stdout else "",
+        "stderr": stderr[-4000:] if stderr else "",
     }

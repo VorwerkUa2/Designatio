@@ -35,6 +35,8 @@ from .publish import github_create_pr, github_create_issue
 from .visual import inspect_preview
 from .plugin_registry import PluginRegistry
 from .orchestrator import doctor, run_all
+from .figma_api import import_figma_api
+from .os_sandbox import execute_sandbox_command
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -199,6 +201,12 @@ def build_parser() -> argparse.ArgumentParser:
     run_auto.add_argument("--mockup")
     run_auto.add_argument("--name", default="Automated Design")
     run_auto.add_argument("--output", default="output/automated")
+
+    figma_api = subparsers.add_parser("import-figma-api")
+    figma_api.add_argument("file_key")
+    figma_api.add_argument("--token")
+    figma_api.add_argument("--output", default="output/figma-api")
+    figma_api.add_argument("--name")
 
     return parser
 
@@ -414,6 +422,15 @@ def main(argv: list[str] | None = None) -> int:
         report = run_all(args.mockup, args.name, args.output)
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0 if report["passed"] else 1
+
+    if args.command == "import-figma-api":
+        try:
+            report = import_figma_api(args.file_key, args.output, args.token, args.name)
+            print(json.dumps(report, ensure_ascii=False, indent=2))
+            return 0
+        except (ValueError, RuntimeError) as error:
+            print(json.dumps({"passed": False, "status": "figma-api-error", "error": str(error)}, ensure_ascii=False, indent=2))
+            return 1
 
     if args.command == "trust-key":
         store = TrustStore(args.store)

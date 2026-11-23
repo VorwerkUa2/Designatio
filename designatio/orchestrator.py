@@ -6,6 +6,7 @@ import argparse
 import json
 import subprocess
 import sys
+import os
 
 from .contracts import create_project, save_project
 from .toolchain_matrix import inspect_toolchain_matrix
@@ -140,3 +141,29 @@ def run_cli() -> int:
     report = run_all(args.mockup, args.name, args.output)
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0 if report["passed"] else 1
+
+
+def bootstrap_cli() -> int:
+    parser = argparse.ArgumentParser(prog="designatio-bootstrap")
+    parser.add_argument("--flutter", action="store_true")
+    parser.add_argument("--android", action="store_true")
+    parser.add_argument("--shader-tools", action="store_true")
+    parser.add_argument("--no-interactive", action="store_true")
+    args = parser.parse_args()
+
+    steps: list[dict[str, Any]] = []
+    if args.flutter:
+        if os.name == "nt":
+            steps.append({"target": "flutter", "status": "manual", "hint": "Install Flutter SDK and enable flutter via PATH."})
+        else:
+            steps.append({"target": "flutter", "status": "manual", "hint": "Install Flutter SDK or use subosito/flutter-action in CI."})
+    if args.android:
+        steps.append({"target": "android", "status": "manual", "hint": "Install Android SDK/cmdline-tools or use android-actions/setup-android in CI."})
+    if args.shader_tools:
+        if os.name == "nt":
+            steps.append({"target": "shader-tools", "status": "manual", "hint": "Install Vulkan SDK or Khronos glslang/MSL/HLSL tools."})
+        else:
+            steps.append({"target": "shader-tools", "status": "manual", "hint": "Install glslang-tools/dxc or use official CI packages."})
+    report = {"passed": True, "steps": steps, "doctor": doctor()}
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0

@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import sys
 
 from designatio.contracts import create_project, load_project, save_project
 from designatio.mockup import analyze_mockup
@@ -19,6 +20,7 @@ from designatio.build_validation import validate_source
 from designatio.plugin_bundle import create_plugin_bundle, inspect_plugin_bundle
 from designatio.shader_validation import validate_shader
 from designatio.plugin_marketplace import create_marketplace_entry
+from designatio.os_sandbox import build_sandbox_command, execute_sandbox_command
 from designatio.trust_store import TrustStore
 from designatio.preview_host import start_preview_server, stop_preview_server
 from designatio.platform import python_executable, npm_executable, tesseract_executable
@@ -27,6 +29,8 @@ from designatio.os_sandbox import detect_os_sandbox
 from designatio.toolchain_matrix import inspect_toolchain_matrix
 from designatio.hosted_marketplace import start_marketplace_server, stop_marketplace_server
 from designatio.os_sandbox import build_sandbox_command
+from designatio.figma_api import fetch_figma_file
+from designatio.orchestrator import bootstrap_cli
 from designatio.orchestrator import doctor, run_all
 from designatio.hosted_marketplace import validate_hosted_entry, create_hosted_index
 from designatio.os_sandbox import detect_os_sandbox, validate_sandbox_backend
@@ -529,6 +533,43 @@ def test_sandbox_command_builder(tmp_path: Path) -> None:
 
     assert report["backend"] == "bounded"
     assert report["command"][-1].endswith("entry.json")
+
+
+def test_windows_job_object_command_when_requested(tmp_path: Path) -> None:
+    entry = tmp_path / "entry.py"
+    entry.write_text("print('sandbox')\n", encoding="utf-8")
+
+    report = build_sandbox_command(entry, {}, "job-object")
+
+    assert report["backend"] == "job-object"
+    assert str(entry) in report["command"]
+
+
+def test_figma_api_requires_token() -> None:
+    try:
+        fetch_figma_file("example", token="")
+    except ValueError as error:
+        assert "token" in str(error)
+    else:
+        raise AssertionError("Figma API accepted a missing token")
+
+
+def test_bootstrap_is_explicit(tmp_path: Path) -> None:
+    import contextlib
+    import io
+
+    stdout = io.StringIO()
+    old = sys.argv
+    sys.argv = ["designatio-bootstrap", "--flutter", "--android", "--shader-tools"]
+    try:
+        with contextlib.redirect_stdout(stdout):
+            from designatio.orchestrator import bootstrap_cli
+            result = bootstrap_cli()
+    finally:
+        sys.argv = old
+
+    assert result == 0
+    assert "flutter" in stdout.getvalue()
 
 
 def test_doctor_and_automated_run(tmp_path: Path) -> None:

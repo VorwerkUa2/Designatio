@@ -34,6 +34,8 @@ from ..trust_store import TrustStore
 from ..preview_host import start_preview_server, stop_preview_server
 from ..plugin_registry import PluginRegistry
 from ..orchestrator import doctor, run_all
+from ..figma_api import import_figma_api
+from ..os_sandbox import execute_sandbox_command
 
 
 TOOLS = [
@@ -355,6 +357,16 @@ TOOLS = [
         "description": "Run automated project generation, React build, screenshots and QA.",
         "inputSchema": {"type": "object", "properties": {"mockup": {"type": "string"}, "name": {"type": "string"}, "outputDir": {"type": "string"}}},
     },
+    {
+        "name": "design_import_figma_api",
+        "description": "Fetch a Figma file through the Figma API and import it into Designatio.",
+        "inputSchema": {"type": "object", "properties": {"fileKey": {"type": "string"}, "token": {"type": "string"}, "outputDir": {"type": "string"}, "name": {"type": "string"}}, "required": ["fileKey", "outputDir"]},
+    },
+    {
+        "name": "design_execute_sandbox_command",
+        "description": "Execute a constructed sandbox command with timeout and captured output.",
+        "inputSchema": {"type": "object", "properties": {"commandReport": {"type": "object"}, "timeout": {"type": "integer"}}, "required": ["commandReport"]},
+    },
 ]
 
 
@@ -572,6 +584,20 @@ def execute(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
             arguments.get("mockup"),
             arguments.get("name", "Automated Design"),
             arguments.get("outputDir", "output/automated"),
+        ))
+
+    if name == "design_import_figma_api":
+        return result(import_figma_api(
+            arguments["fileKey"],
+            arguments["outputDir"],
+            arguments.get("token"),
+            arguments.get("name"),
+        ))
+
+    if name == "design_execute_sandbox_command":
+        return result(execute_sandbox_command(
+            arguments["commandReport"],
+            int(arguments.get("timeout", 10)),
         ))
 
     if name == "design_trust_key":

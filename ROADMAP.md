@@ -37,6 +37,9 @@
 - Loopback hosted marketplace server
 - OS/container sandbox command adapters
 - Real Mnemosyne MCP config and preview manifest bridge
+- Live Figma API import via FIGMA_TOKEN
+- Automated bootstrap hooks for Flutter, Android and shader tools
+- macOS Swift/Xcode and Linux shader CI coverage
 - Mnemosyne preview handoff
 - Accessibility and responsive reports
 - End-to-end mockup pipeline

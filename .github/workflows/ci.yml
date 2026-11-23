@@ -99,3 +99,31 @@ jobs:
         run: python -m pip install -e ".[test]"
       - name: Validate compose scaffold contract
         run: python -m designatio.cli init --name "CI Compose" --platform mobile --stack compose --output output/project.json && python -m designatio.cli render-native compose output/project.json --output output/compose && test -f output/compose/DesignatioScreen.kt
+
+  swift-build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Designatio
+        run: python -m pip install -e ".[test]"
+      - name: Generate SwiftUI scaffold
+        run: python -m designatio.cli init --name "CI Swift" --platform ios --stack swiftui --output output/project.json && python -m designatio.cli render-native swiftui output/project.json --output output/swiftui
+      - name: Verify Swift syntax
+        run: swiftc -parse output/swiftui/ContentView.swift
+
+  shader-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install shader tools
+        run: sudo apt-get update && sudo apt-get install -y glslang-tools
+      - name: Install Designatio
+        run: python -m pip install -e ".[test]"
+      - name: Create and validate shader
+        run: printf 'void main() {}' > output-test.frag && python -m designatio.cli validate-shader output-test.frag

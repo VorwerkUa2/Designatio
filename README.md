@@ -69,6 +69,8 @@ python -m designatio.cli route "Create a responsive React dashboard"
 python -m designatio.cli pipeline mockup.png --name "CRM Dashboard" --output output/pipeline
 designatio-doctor
 designatio-run --mockup mockup.png --name "CRM Dashboard" --output output/automated
+designatio-bootstrap --flutter --android --shader-tools
+python -m designatio.cli import-figma-api FILE_KEY --output output/figma-api
 python -m designatio.cli catalog
 python -m designatio.cli catalog --language swift
 python -m designatio.cli resolve-stack "Create a native C++ Qt app with OpenGL"

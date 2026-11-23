@@ -21,6 +21,7 @@ host = ["cryptography>=43.0"]
 designatio = "designatio.cli:main"
 designatio-doctor = "designatio.orchestrator:doctor_cli"
 designatio-run = "designatio.orchestrator:run_cli"
+designatio-bootstrap = "designatio.orchestrator:bootstrap_cli"
 
 [tool.setuptools.packages.find]
 include = ["designatio*"]

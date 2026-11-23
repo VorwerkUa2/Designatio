@@ -11,6 +11,13 @@ from designatio.mockup import infer_components
 from designatio.catalog import get_language_catalog, resolve_language, find_graphics_libraries
 from designatio.native_renderers import render_native
 from designatio.figma import import_figma_json
+from designatio.layout_analysis import merge_reading_order, detect_grid
+from designatio.design_mappings import export_tailwind, react_tailwind_source
+from designatio.texture_pipeline import generate_seamless
+from designatio.plugin_registry import PluginRegistry
+from designatio.engine_manifest import export_engine_manifest
+from designatio.publish import create_mnemosyne_handoff
+from designatio.native_renderers import render_native
 
 
 def test_project_roundtrip(tmp_path: Path) -> None:
@@ -201,3 +208,72 @@ def test_figma_json_import(tmp_path: Path) -> None:
     assert result["components"] >= 1
     assert result["textNodes"] == 1
     assert (tmp_path / "project" / "project.json").is_file()
+
+
+def test_reading_order_and_grid(tmp_path: Path) -> None:
+    items = [
+        {"text": "Right", "box": {"x": 500, "y": 100, "width": 50, "height": 20}},
+        {"text": "Left", "box": {"x": 100, "y": 96, "width": 50, "height": 20}},
+        {"text": "Next", "box": {"x": 100, "y": 300, "width": 50, "height": 20}},
+    ]
+    zones = [{"box": {"x": 100, "y": 100, "width": 200, "height": 100}}, {"box": {"x": 400, "y": 100, "width": 200, "height": 100}}]
+
+    assert merge_reading_order(items) == ["Left Right", "Next"]
+    assert detect_grid(zones, 1440, 900)["grid"] in {"12-column", "flow"}
+
+
+def test_tailwind_and_texture_exports(tmp_path: Path) -> None:
+    project = create_project("Tailwind app")
+    mapping = export_tailwind(project)
+    source = tmp_path / "source.png"
+    Image = __import__("PIL.Image", fromlist=["Image"])
+    Image.new("RGB", (64, 64), "#4F46E5").save(source)
+
+    texture = generate_seamless(source, tmp_path / "texture")
+    react_source = react_tailwind_source(project)
+
+    assert mapping["classNameHints"]["grid"] == "grid grid-cols-1 md:grid-cols-2 gap-6"
+    assert "className=\"grid" in react_source
+    assert (tmp_path / "texture" / "normal.png").is_file()
+    assert texture["maps"] == ["base", "normal", "roughness"]
+
+
+def test_plugin_registry_sign_verify_and_allowlist(tmp_path: Path) -> None:
+    registry = PluginRegistry(tmp_path / "plugins")
+    signed = registry.register({"name": "tailwind-export", "version": "1.0.0", "target": "react"}, "test-secret")
+
+    assert registry.verify_manifest(signed, "test-secret") is True
+    assert registry.verify_manifest(signed, "wrong-secret") is False
+
+    try:
+        registry.register({"name": "shell", "version": "1.0.0", "target": "shell"}, "test-secret")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("unsafe plugin target was accepted")
+
+
+def test_engine_manifest_and_mnemosyne_handoff(tmp_path: Path) -> None:
+    project = create_project("3D app")
+    project["components"] = [{"type": "card", "title": "Scene", "description": "Main scene"}]
+
+    engine = export_engine_manifest(project, "godot", tmp_path / "engine")
+    handoff = create_mnemosyne_handoff(project, tmp_path / "mnemosyne")
+
+    assert engine["engine"] == "godot"
+    assert (tmp_path / "engine" / "godot-manifest.json").is_file()
+    assert (tmp_path / "mnemosyne" / "mnemosyne-handoff.json").is_file()
+
+
+def test_tauri_renderer(tmp_path: Path) -> None:
+    project = create_project("Tauri app")
+    project["components"] = [
+        {"type": "header", "title": "Desktop", "description": "Tauri interface"},
+        {"type": "card", "title": "Settings", "description": "Preferences"},
+    ]
+
+    result = render_native(project, "tauri", tmp_path)
+
+    assert result["renderer"] == "tauri"
+    assert (tmp_path / "src-tauri" / "tauri.conf.json").is_file()
+    assert (tmp_path / "index.html").is_file()

@@ -8,6 +8,11 @@ def _safe_text(value: Any) -> str:
     return str(value).replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
 
 
+def _html_text(value: Any) -> str:
+    import html
+    return html.escape(str(value), quote=True)
+
+
 def _components(project: dict[str, Any]) -> list[dict[str, Any]]:
     return project.get("components") or [
         {"type": "header", "title": project["name"], "description": "Production-ready interface"},
@@ -221,6 +226,46 @@ impl eframe::App for DesignatioApp {{
     return {"renderer": "egui", "entry": str((output / "main.rs").resolve()), "files": [str((output / "main.rs").resolve()), str((output / "Cargo.toml").resolve())]}
 
 
+def render_tauri(project: dict[str, Any], output_dir: str | Path) -> dict[str, Any]:
+    output = Path(output_dir)
+    src = output / "src"
+    src.mkdir(parents=True, exist_ok=True)
+    components = _components(project)
+    header = next((item for item in components if item.get("type") == "header"), components[0])
+    cards = [item for item in components if item.get("type") != "header"]
+    card_markup = "\n".join(
+        f'      <article><h2>{_html_text(card.get("title", "Card"))}</h2><p>{_html_text(card.get("description", ""))}</p></article>'
+        for card in cards
+    )
+    html = f'''<!doctype html>
+<html lang="uk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{_html_text(project["name"])}</title><link rel="stylesheet" href="/src/style.css"></head>
+<body><main><header><div><h1>{_html_text(header.get("title", project["name"]))}</h1><p>{_html_text(header.get("description", ""))}</p></div></header>
+<section>{card_markup}</section></main><script type="module" src="/src/main.js"></script></body></html>'''
+    (output / "index.html").write_text(html, encoding="utf-8")
+    (src / "main.js").write_text('window.addEventListener("DOMContentLoaded", () => document.documentElement.classList.add("ready"));\\n', encoding="utf-8")
+    (src / "style.css").write_text('''
+:root { font-family: Inter, system-ui, sans-serif; color: #172033; background: #f5f7fb; }
+* { box-sizing: border-box; } body { margin: 0; min-height: 100vh; }
+main { max-width: 1280px; margin: auto; padding: 32px; }
+header { margin-bottom: 32px; } section { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+article { min-height: 180px; padding: 24px; background: white; border: 1px solid #e4e7ec; border-radius: 12px; }
+article p { color: #667085; } @media (max-width: 768px) { main { padding: 24px 16px; } section { grid-template-columns: 1fr; } }
+''', encoding="utf-8")
+    tauri = output / "src-tauri"
+    tauri.mkdir(parents=True, exist_ok=True)
+    (tauri / "Cargo.toml").write_text('[package]\nname = "designatio-tauri"\nversion = "0.1.0"\nedition = "2021"\n\n[dependencies]\ntauri = "2"\n', encoding="utf-8")
+    (tauri / "tauri.conf.json").write_text(
+        '{"productName":"Designatio","version":"0.1.0","identifier":"com.designatio.generated","app":{"windows":[{"title":"Designatio","width":1280,"height":800}]},"build":{"frontendDist":"../dist","beforeBuildCommand":"npm run build","beforeDevCommand":"npm run dev","devUrl":"http://localhost:1420"}}',
+        encoding="utf-8",
+    )
+    (output / "package.json").write_text(
+        '{"name":"designatio-tauri","private":true,"type":"module","scripts":{"dev":"vite --port 1420","build":"vite build"},"devDependencies":{"vite":"latest"},"dependencies":{"@tauri-apps/api":"latest"}}',
+        encoding="utf-8",
+    )
+    return {"renderer": "tauri", "entry": str((output / "index.html").resolve()), "files": [str((output / "index.html").resolve()), str((tauri / "tauri.conf.json").resolve())]}
+
+
 RENDERER_REGISTRY: dict[str, Callable[[dict[str, Any], str | Path], dict[str, Any]]] = {
     "flutter": render_flutter,
     "dart": render_flutter,
@@ -231,6 +276,7 @@ RENDERER_REGISTRY: dict[str, Callable[[dict[str, Any], str | Path], dict[str, An
     "kotlin": render_compose,
     "egui": render_egui,
     "rust-egui": render_egui,
+    "tauri": render_tauri,
 }
 
 

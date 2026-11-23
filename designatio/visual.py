@@ -38,6 +38,53 @@ def take_screenshots(target: str | Path, output_dir: str | Path) -> dict:
     return asyncio.run(take_screenshots_async(target, output_dir))
 
 
+async def inspect_preview_async(target: str | Path) -> dict:
+    from playwright.async_api import async_playwright
+
+    target_path = Path(target).resolve()
+    if not target_path.exists():
+        raise FileNotFoundError(f"Preview target not found: {target_path}")
+    url = target_path.as_uri() if target_path.is_file() else target_path.as_posix()
+
+    async with async_playwright() as playwright:
+        browser = await playwright.chromium.launch(headless=True)
+        page = await browser.new_page(viewport={"width": 1440, "height": 900})
+        await page.goto(url, wait_until="networkidle")
+        metrics = await page.evaluate(
+            """() => ({
+              documentWidth: document.documentElement.scrollWidth,
+              viewportWidth: document.documentElement.clientWidth,
+              horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+              headings: [...document.querySelectorAll("h1,h2,h3,h4,h5,h6")].map(node => node.tagName),
+              h1Count: document.querySelectorAll("h1").length,
+              imagesWithoutAlt: [...document.querySelectorAll("img")].filter(node => !node.hasAttribute("alt")).length,
+              unlabeledButtons: [...document.querySelectorAll("button")].filter(node => !(node.textContent || "").trim() && !node.getAttribute("aria-label")).length,
+              emptyLinks: [...document.querySelectorAll("a")].filter(node => !(node.textContent || "").trim() && !node.getAttribute("aria-label")).length,
+              lang: document.documentElement.lang || null
+            })"""
+        )
+        await browser.close()
+
+    issues = []
+    if metrics["horizontalOverflow"]:
+        issues.append({"rule": "horizontal-overflow", "message": "Document is wider than the 1440px viewport"})
+    if metrics["h1Count"] != 1:
+        issues.append({"rule": "h1-count", "message": f"Expected exactly one h1; found {metrics['h1Count']}"})
+    if metrics["imagesWithoutAlt"]:
+        issues.append({"rule": "image-alt", "message": f"{metrics['imagesWithoutAlt']} image(s) have no alt attribute"})
+    if metrics["unlabeledButtons"]:
+        issues.append({"rule": "button-name", "message": f"{metrics['unlabeledButtons']} button(s) have no name"})
+    if metrics["emptyLinks"]:
+        issues.append({"rule": "link-name", "message": f"{metrics['emptyLinks']} link(s) have no name"})
+    if not metrics["lang"]:
+        issues.append({"rule": "document-language", "message": "The html element has no lang attribute"})
+    return {"passed": not issues, "issues": issues, "metrics": metrics}
+
+
+def inspect_preview(target: str | Path) -> dict:
+    return asyncio.run(inspect_preview_async(target))
+
+
 def compare_images(reference: str | Path, rendered: str | Path, output_dir: str | Path) -> dict:
     try:
         from PIL import Image, ImageChops, ImageStat

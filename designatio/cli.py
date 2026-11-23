@@ -14,6 +14,12 @@ from .pipeline import run_pipeline
 from .catalog import get_language_catalog, resolve_language, find_graphics_libraries
 from .native_renderers import render_native
 from .figma import import_figma_json
+from .design_mappings import export_tailwind, react_tailwind_source
+from .texture_pipeline import generate_seamless
+from .engine_manifest import export_engine_manifest
+from .publish import git_status, create_commit, create_mnemosyne_handoff
+from .visual import inspect_preview
+from .plugin_registry import PluginRegistry
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -76,6 +82,29 @@ def build_parser() -> argparse.ArgumentParser:
     figma.add_argument("json")
     figma.add_argument("--output", default="output/figma")
     figma.add_argument("--name")
+
+    tailwind = subparsers.add_parser("tailwind")
+    tailwind.add_argument("project")
+    tailwind.add_argument("--output", default="output/tailwind.json")
+
+    texture = subparsers.add_parser("texture")
+    texture.add_argument("source")
+    texture.add_argument("--output", default="output/texture")
+
+    engine = subparsers.add_parser("engine-manifest")
+    engine.add_argument("target")
+    engine.add_argument("project")
+    engine.add_argument("--output", default="output/engine")
+
+    handoff = subparsers.add_parser("mnemosyne-handoff")
+    handoff.add_argument("project")
+    handoff.add_argument("--output", default="output/mnemosyne")
+
+    git = subparsers.add_parser("git-status")
+    git.add_argument("repo")
+
+    browser = subparsers.add_parser("browser-qa")
+    browser.add_argument("target")
 
     return parser
 
@@ -168,6 +197,44 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "import-figma":
         report = import_figma_json(args.json, args.output, args.name)
         print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "tailwind":
+        project = load_project(args.project)
+        mapping = export_tailwind(project)
+        output = Path(args.output)
+        if output.suffix.lower() in {".js", ".json"}:
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(json.dumps(mapping, ensure_ascii=False, indent=2), encoding="utf-8")
+        else:
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(react_tailwind_source(project), encoding="utf-8")
+        print(str(output.resolve()))
+        return 0
+
+    if args.command == "texture":
+        report = generate_seamless(args.source, args.output)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "engine-manifest":
+        project = load_project(args.project)
+        report = export_engine_manifest(project, args.target, args.output)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "mnemosyne-handoff":
+        project = load_project(args.project)
+        report = create_mnemosyne_handoff(project, args.output)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "git-status":
+        print(json.dumps(git_status(args.repo), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "browser-qa":
+        print(json.dumps(inspect_preview(args.target), ensure_ascii=False, indent=2))
         return 0
 
     return 2

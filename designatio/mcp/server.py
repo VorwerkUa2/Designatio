@@ -10,11 +10,16 @@ from ..mockup import analyze_mockup
 from ..renderers import render_html, render_react
 from ..router import route_task
 from ..validation import check_accessibility, check_responsive
-from ..visual import take_screenshots, compare_images
+from ..visual import take_screenshots, compare_images, inspect_preview
 from ..pipeline import run_pipeline
 from ..catalog import get_language_catalog, resolve_language, find_graphics_libraries
 from ..native_renderers import render_native
 from ..figma import import_figma_json
+from ..design_mappings import export_tailwind
+from ..texture_pipeline import generate_seamless
+from ..engine_manifest import export_engine_manifest
+from ..publish import git_status, create_commit, create_mnemosyne_handoff, push_repository
+from ..plugin_registry import PluginRegistry
 
 
 TOOLS = [
@@ -151,12 +156,12 @@ TOOLS = [
     },
     {
         "name": "design_render_native",
-        "description": "Generate Flutter, SwiftUI, Compose or egui source from a Designatio project.",
+        "description": "Generate Flutter, SwiftUI, Compose, egui or Tauri source from a Designatio project.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "projectPath": {"type": "string"},
-                "target": {"type": "string", "enum": ["flutter", "swiftui", "compose", "egui"]},
+                "target": {"type": "string", "enum": ["flutter", "swiftui", "compose", "egui", "tauri"]},
                 "outputDir": {"type": "string"},
             },
             "required": ["projectPath", "target", "outputDir"],
@@ -170,6 +175,46 @@ TOOLS = [
             "properties": {"jsonPath": {"type": "string"}, "outputDir": {"type": "string"}, "name": {"type": "string"}},
             "required": ["jsonPath", "outputDir"],
         },
+    },
+    {
+        "name": "design_export_tailwind",
+        "description": "Export design tokens and React Tailwind class hints.",
+        "inputSchema": {"type": "object", "properties": {"projectPath": {"type": "string"}, "outputDir": {"type": "string"}}, "required": ["projectPath", "outputDir"]},
+    },
+    {
+        "name": "design_generate_texture",
+        "description": "Generate seamless base, normal and roughness texture maps.",
+        "inputSchema": {"type": "object", "properties": {"source": {"type": "string"}, "outputDir": {"type": "string"}, "size": {"type": "integer"}}, "required": ["source", "outputDir"]},
+    },
+    {
+        "name": "design_export_engine",
+        "description": "Export a neutral 3D engine manifest for Three.js, Babylon, Unity, Godot, Unreal, Bevy or Blender.",
+        "inputSchema": {"type": "object", "properties": {"projectPath": {"type": "string"}, "engine": {"type": "string"}, "outputDir": {"type": "string"}}, "required": ["projectPath", "engine", "outputDir"]},
+    },
+    {
+        "name": "design_mnemosyne_handoff",
+        "description": "Create a machine-readable Mnemosyne workspace handoff.",
+        "inputSchema": {"type": "object", "properties": {"projectPath": {"type": "string"}, "outputDir": {"type": "string"}}, "required": ["projectPath", "outputDir"]},
+    },
+    {
+        "name": "design_git_status",
+        "description": "Read Git status for a local repository without modifying it.",
+        "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}}, "required": ["repo"]},
+    },
+    {
+        "name": "design_register_plugin",
+        "description": "Register a signed plugin manifest in the local plugin allowlist.",
+        "inputSchema": {"type": "object", "properties": {"registryDir": {"type": "string"}, "manifest": {"type": "object"}, "secret": {"type": "string"}}, "required": ["registryDir", "manifest", "secret"]},
+    },
+    {
+        "name": "design_browser_qa",
+        "description": "Inspect DOM overflow, heading structure, alt text, button names and document language.",
+        "inputSchema": {"type": "object", "properties": {"target": {"type": "string"}}, "required": ["target"]},
+    },
+    {
+        "name": "design_push",
+        "description": "Push an existing local Designatio repository to a configured remote.",
+        "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}, "remote": {"type": "string"}, "branch": {"type": "string"}}, "required": ["repo"]},
     },
 ]
 
@@ -267,6 +312,40 @@ def execute(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
 
     if name == "design_import_figma":
         return result(import_figma_json(arguments["jsonPath"], arguments["outputDir"], arguments.get("name")))
+
+    if name == "design_export_tailwind":
+        project = load_project(arguments["projectPath"])
+        output = Path(arguments["outputDir"])
+        output.mkdir(parents=True, exist_ok=True)
+        mapping_path = output / "tailwind.json"
+        mapping_path.write_text(json.dumps(export_tailwind(project), ensure_ascii=False, indent=2), encoding="utf-8")
+        return result({"mapping": str(mapping_path.resolve()), "data": export_tailwind(project)})
+
+    if name == "design_generate_texture":
+        size = arguments.get("size", 512)
+        report = generate_seamless(arguments["source"], arguments["outputDir"], int(size))
+        return result(report)
+
+    if name == "design_export_engine":
+        project = load_project(arguments["projectPath"])
+        return result(export_engine_manifest(project, arguments["engine"], arguments["outputDir"]))
+
+    if name == "design_mnemosyne_handoff":
+        project = load_project(arguments["projectPath"])
+        return result(create_mnemosyne_handoff(project, arguments["outputDir"]))
+
+    if name == "design_git_status":
+        return result(git_status(arguments["repo"]))
+
+    if name == "design_register_plugin":
+        registry = PluginRegistry(arguments["registryDir"])
+        return result(registry.register(arguments["manifest"], arguments["secret"]))
+
+    if name == "design_browser_qa":
+        return result(inspect_preview(arguments["target"]))
+
+    if name == "design_push":
+        return result(push_repository(arguments["repo"], arguments.get("remote", "origin"), arguments.get("branch", "main")))
 
     raise ValueError(f"Unknown tool: {name}")
 

@@ -74,8 +74,20 @@ def run_pipeline(
 
     comparisons: dict[str, Any] = {}
     reference = Path(mockup)
+    try:
+        from PIL import Image
+        with Image.open(reference) as reference_image:
+            reference_width = reference_image.width
+    except Exception:
+        reference_width = None
     for width, rendered_path in screenshots["screenshots"].items():
         if reference.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}:
+            if reference_width is not None and abs(reference_width - int(width)) > 40:
+                comparisons[width] = {
+                    "skipped": True,
+                    "reason": f"Reference width {reference_width}px does not match breakpoint {width}px",
+                }
+                continue
             try:
                 comparisons[width] = compare_images(
                     reference,

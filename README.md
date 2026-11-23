@@ -40,6 +40,8 @@ py -m designatio.cli render-native swiftui output/project.json --output output/s
 py -m designatio.cli render-native compose output/project.json --output output/compose
 py -m designatio.cli render-native egui output/project.json --output output/egui
 py -m designatio.cli import-figma figma-screen.json --name "Dashboard" --output output/figma
+py -m designatio.cli texture <source-image> --output output/texture
+py -m designatio.cli tailwind output/project.json --output output/tailwind.txt
 ```
 
 ## Installation
@@ -84,6 +86,16 @@ MCP tools:
 - `design_run_pipeline`
 - `design_list_languages`
 - `design_resolve_stack`
+- `design_render_native`
+- `design_import_figma`
+- `design_export_tailwind`
+- `design_generate_texture`
+- `design_export_engine`
+- `design_mnemosyne_handoff`
+- `design_git_status`
+- `design_register_plugin`
+- `design_browser_qa`
+- `design_push`
 
 ## End-to-end pipeline
 

@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .layout_analysis import detect_grid, merge_reading_order
+
 
 def _tesseract_candidates() -> tuple[str, ...]:
     return (
@@ -126,4 +128,6 @@ def extract_layout(path: str | Path) -> dict[str, Any]:
         "zones": zones,
         "componentHints": component_types,
         "ocrError": ocr_error,
+        "readingOrder": merge_reading_order(text_items[:500]),
+        "grid": detect_grid(zones, width, height),
     }

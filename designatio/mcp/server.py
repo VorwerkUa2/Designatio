@@ -10,7 +10,7 @@ from ..mockup import analyze_mockup
 from ..renderers import render_html, render_react
 from ..router import route_task
 from ..validation import check_accessibility, check_responsive
-from ..visual import take_screenshots, compare_images, inspect_preview
+from ..visual import take_screenshots, compare_images, inspect_preview, compare_regions
 from ..pipeline import run_pipeline
 from ..catalog import get_language_catalog, resolve_language, find_graphics_libraries
 from ..native_renderers import render_native
@@ -18,7 +18,7 @@ from ..figma import import_figma_json
 from ..design_mappings import export_tailwind
 from ..texture_pipeline import generate_seamless
 from ..engine_manifest import export_engine_manifest
-from ..publish import git_status, create_commit, create_mnemosyne_handoff, push_repository
+from ..publish import git_status, create_commit, create_mnemosyne_handoff, push_repository, github_status, github_create_release, mnemosyne_launch_preview
 from ..plugin_registry import PluginRegistry
 
 
@@ -216,6 +216,41 @@ TOOLS = [
         "description": "Push an existing local Designatio repository to a configured remote.",
         "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}, "remote": {"type": "string"}, "branch": {"type": "string"}}, "required": ["repo"]},
     },
+    {
+        "name": "design_compare_regions",
+        "description": "Compare detected OCR/layout regions against a rendered screenshot.",
+        "inputSchema": {"type": "object", "properties": {"reference": {"type": "string"}, "rendered": {"type": "string"}, "regions": {"type": "array"}, "outputDir": {"type": "string"}}, "required": ["reference", "rendered", "regions", "outputDir"]},
+    },
+    {
+        "name": "design_plugin_keys",
+        "description": "Generate an Ed25519 keypair for plugin signing.",
+        "inputSchema": {"type": "object", "properties": {"registryDir": {"type": "string"}, "privateName": {"type": "string"}, "publicName": {"type": "string"}}, "required": ["registryDir"]},
+    },
+    {
+        "name": "design_plugin_sign",
+        "description": "Sign a plugin manifest with Ed25519.",
+        "inputSchema": {"type": "object", "properties": {"registryDir": {"type": "string"}, "manifest": {"type": "object"}, "privateKey": {"type": "string"}}, "required": ["registryDir", "manifest", "privateKey"]},
+    },
+    {
+        "name": "design_plugin_execute",
+        "description": "Verify and execute a plugin under the allowlisted sandbox.",
+        "inputSchema": {"type": "object", "properties": {"registryDir": {"type": "string"}, "manifest": {"type": "object"}, "publicKey": {"type": "string"}, "payload": {"type": "object"}}, "required": ["registryDir", "manifest", "publicKey"]},
+    },
+    {
+        "name": "design_github_status",
+        "description": "Inspect the local repository and GitHub CLI repository metadata.",
+        "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}}, "required": ["repo"]},
+    },
+    {
+        "name": "design_github_release",
+        "description": "Create a GitHub release for an existing tag.",
+        "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}, "tag": {"type": "string"}, "title": {"type": "string"}, "notes": {"type": "string"}}, "required": ["repo", "tag", "title"]},
+    },
+    {
+        "name": "design_mnemosyne_preview",
+        "description": "Create a Mnemosyne preview handoff for a generated preview directory.",
+        "inputSchema": {"type": "object", "properties": {"previewDir": {"type": "string"}}, "required": ["previewDir"]},
+    },
 ]
 
 
@@ -346,6 +381,33 @@ def execute(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
 
     if name == "design_push":
         return result(push_repository(arguments["repo"], arguments.get("remote", "origin"), arguments.get("branch", "main")))
+
+    if name == "design_compare_regions":
+        return result(compare_regions(arguments["reference"], arguments["rendered"], arguments["regions"], arguments["outputDir"]))
+
+    if name == "design_plugin_keys":
+        registry = PluginRegistry(arguments["registryDir"])
+        private_name = arguments.get("privateName", "plugin-private.pem")
+        public_name = arguments.get("publicName", "plugin-public.pem")
+        root = Path(arguments["registryDir"])
+        return result(registry.generate_ed25519_keypair(root / private_name, root / public_name))
+
+    if name == "design_plugin_sign":
+        registry = PluginRegistry(arguments["registryDir"])
+        return result(registry.sign_ed25519(arguments["manifest"], arguments["privateKey"]))
+
+    if name == "design_plugin_execute":
+        registry = PluginRegistry(arguments["registryDir"])
+        return result(registry.execute_sandboxed(arguments["manifest"], arguments["publicKey"], arguments.get("payload", {})))
+
+    if name == "design_github_status":
+        return result(github_status(arguments["repo"]))
+
+    if name == "design_github_release":
+        return result(github_create_release(arguments["repo"], arguments["tag"], arguments["title"], arguments.get("notes", "")))
+
+    if name == "design_mnemosyne_preview":
+        return result(mnemosyne_launch_preview(arguments["previewDir"]))
 
     raise ValueError(f"Unknown tool: {name}")
 

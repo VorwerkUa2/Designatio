@@ -15,9 +15,12 @@ def infer_components(analysis: dict[str, Any], project_name: str) -> list[dict[s
     zones = detected.get("zones", [])
 
     components: list[dict[str, Any]] = []
+    canvas_height = analysis["source"].get("height", 100000)
+    canvas_width = analysis["source"].get("width", 100000)
+
     header_items = [
         item for item in text_items
-        if item["box"]["y"] < analysis["source"].get("height", 100000) * 0.25
+        if item["box"]["y"] < canvas_height * 0.25
     ]
     if header_items:
         header_title = " ".join(item["text"] for item in header_items[:4])
@@ -31,7 +34,34 @@ def infer_components(analysis: dict[str, Any], project_name: str) -> list[dict[s
         "description": remaining[:240],
     })
 
-    card_zones = [zone for zone in zones if zone["type"] == "card"][:6]
+    card_zones = [zone for zone in zones if zone["type"] == "card"][:8]
+    section_zones = [zone for zone in zones if zone["type"] in {"section", "sidebar"}][:8]
+    button_zones = [
+        zone for zone in zones
+        if zone["type"] == "card"
+        and zone["box"]["height"] < canvas_height * 0.12
+        and zone["box"]["width"] < canvas_width * 0.18
+    ]
+    actions = [
+        item["text"] for item in text_items
+        if any(
+            item["box"]["x"] >= zone["box"]["x"] - 8
+            and item["box"]["y"] >= zone["box"]["y"] - 8
+            and item["box"]["x"] + item["box"]["width"] <= zone["box"]["x"] + zone["box"]["width"] + 8
+            and item["box"]["y"] + item["box"]["height"] <= zone["box"]["y"] + zone["box"]["height"] + 8
+            for zone in button_zones
+        )
+    ]
+    if actions:
+        components[0]["actions"] = list(dict.fromkeys(actions))[:6]
+
+    if section_zones:
+        components.append({
+            "type": "section",
+            "title": " ".join(item["text"] for item in header_items[8:12])[:120] or "Content section",
+            "description": " ".join(item["text"] for item in text_items if item["box"]["y"] > canvas_height * 0.25)[:240],
+            "zones": section_zones[:6],
+        })
     used_boxes: set[int] = set()
     for index, zone in enumerate(card_zones, start=1):
         box = zone["box"]

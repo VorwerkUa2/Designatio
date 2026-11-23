@@ -18,6 +18,12 @@
 - Signed manifest registry with target allowlist
 - Git status, commit and push helpers
 - Mnemosyne workspace handoff
+- Semantic header/card/section/action inference
+- Region-aware OCR pixel comparison
+- Ed25519 plugin signing and verification
+- Allowlist JSON/Python plugin sandbox
+- GitHub CLI repository status and release helper
+- Mnemosyne preview handoff
 - Accessibility and responsive reports
 - End-to-end mockup pipeline
 

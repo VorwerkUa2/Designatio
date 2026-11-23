@@ -18,6 +18,7 @@ from .design_mappings import export_tailwind, react_tailwind_source
 from .texture_pipeline import generate_seamless
 from .engine_manifest import export_engine_manifest
 from .publish import git_status, create_commit, create_mnemosyne_handoff
+from .publish import mnemosyne_launch_preview
 from .visual import inspect_preview
 from .plugin_registry import PluginRegistry
 
@@ -105,6 +106,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     browser = subparsers.add_parser("browser-qa")
     browser.add_argument("target")
+
+    mnemosyne_preview = subparsers.add_parser("mnemosyne-preview")
+    mnemosyne_preview.add_argument("preview")
 
     return parser
 
@@ -235,6 +239,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "browser-qa":
         print(json.dumps(inspect_preview(args.target), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "mnemosyne-preview":
+        print(json.dumps(mnemosyne_launch_preview(args.preview), ensure_ascii=False, indent=2))
         return 0
 
     return 2

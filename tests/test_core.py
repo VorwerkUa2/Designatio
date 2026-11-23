@@ -18,6 +18,8 @@ from designatio.plugin_registry import PluginRegistry
 from designatio.engine_manifest import export_engine_manifest
 from designatio.publish import create_mnemosyne_handoff
 from designatio.native_renderers import render_native
+from designatio.visual import compare_regions
+from designatio.plugin_registry import PluginRegistry
 
 
 def test_project_roundtrip(tmp_path: Path) -> None:
@@ -277,3 +279,71 @@ def test_tauri_renderer(tmp_path: Path) -> None:
     assert result["renderer"] == "tauri"
     assert (tmp_path / "src-tauri" / "tauri.conf.json").is_file()
     assert (tmp_path / "index.html").is_file()
+
+
+def test_region_visual_comparison(tmp_path: Path) -> None:
+    from PIL import Image
+
+    reference = tmp_path / "reference.png"
+    rendered = tmp_path / "rendered.png"
+    Image.new("RGB", (100, 100), "#FFFFFF").save(reference)
+    Image.new("RGB", (100, 100), "#000000").save(rendered)
+
+    report = compare_regions(
+        reference,
+        rendered,
+        [{"type": "card", "box": {"x": 10, "y": 10, "width": 40, "height": 40}}],
+        tmp_path / "regions",
+    )
+
+    assert report["regionCount"] == 1
+    assert report["regions"][0]["differenceRatio"] == 1.0
+
+
+def test_ed25519_plugin_sign_verify(tmp_path: Path) -> None:
+    registry = PluginRegistry(tmp_path / "plugins")
+    keys = registry.generate_ed25519_keypair(
+        tmp_path / "plugins" / "private.pem",
+        tmp_path / "plugins" / "public.pem",
+    )
+    manifest = {
+        "name": "region-check",
+        "version": "1.0.0",
+        "target": "security",
+        "entry": "entry.json",
+        "sandboxRoot": str(tmp_path / "plugins"),
+    }
+    entry = tmp_path / "plugins" / "entry.json"
+    entry.write_text(json.dumps({"mode": "read-only"}), encoding="utf-8")
+
+    signed = registry.sign_ed25519(manifest, keys["private"])
+
+    assert registry.verify_ed25519(signed, keys["public"]) is True
+    assert registry.verify_ed25519(dict(signed, target="shell"), keys["public"]) is False
+    execution = registry.execute_sandboxed(signed, keys["public"], {"region": "header"})
+    assert execution["accepted"] is True
+    assert execution["sandbox"] == "allowlist-json"
+
+
+def test_semantic_component_actions(tmp_path: Path) -> None:
+    analysis = {
+        "source": {"width": 1440, "height": 900},
+        "detected": {
+            "text": {
+                "items": [
+                    {"text": "Dashboard", "confidence": 96, "box": {"x": 100, "y": 60, "width": 120, "height": 30}},
+                    {"text": "Create", "confidence": 96, "box": {"x": 1200, "y": 65, "width": 70, "height": 30}},
+                    {"text": "Revenue", "confidence": 96, "box": {"x": 120, "y": 300, "width": 100, "height": 30}},
+                ],
+            },
+            "zones": [
+                {"type": "card", "box": {"x": 1180, "y": 60, "width": 110, "height": 40}},
+                {"type": "card", "box": {"x": 100, "y": 280, "width": 400, "height": 200}},
+            ],
+        },
+    }
+
+    components = infer_components(analysis, "CRM")
+
+    assert components[0]["type"] == "header"
+    assert "Create" in components[0]["actions"]

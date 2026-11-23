@@ -130,3 +130,65 @@ def compare_images(reference: str | Path, rendered: str | Path, output_dir: str 
         "meanDifference": round(mean_difference, 3),
         "diffImage": str(diff_output.resolve()),
     }
+
+
+def compare_regions(
+    reference: str | Path,
+    rendered: str | Path,
+    regions: list[dict],
+    output_dir: str | Path,
+) -> dict:
+    try:
+        from PIL import Image, ImageChops
+    except ImportError as error:
+        raise RuntimeError("Pillow is required: pip install 'designatio[image]'") from error
+
+    reference_path = Path(reference)
+    rendered_path = Path(rendered)
+    output = Path(output_dir)
+    output.mkdir(parents=True, exist_ok=True)
+    reports: list[dict] = []
+
+    with Image.open(reference_path).convert("RGB") as reference_image:
+        with Image.open(rendered_path).convert("RGB") as rendered_image:
+            scale_x = rendered_image.width / max(reference_image.width, 1)
+            scale_y = rendered_image.height / max(reference_image.height, 1)
+            for index, region in enumerate(regions):
+                box = region["box"]
+                left = max(0, int(box["x"] * scale_x))
+                top = max(0, int(box["y"] * scale_y))
+                right = min(rendered_image.width, int((box["x"] + box["width"]) * scale_x))
+                bottom = min(rendered_image.height, int((box["y"] + box["height"]) * scale_y))
+                if right <= left or bottom <= top:
+                    reports.append({"region": index, "skipped": True, "reason": "Empty or out-of-bounds region"})
+                    continue
+
+                rendered_crop = rendered_image.crop((left, top, right, bottom))
+                ref_left = max(0, box["x"])
+                ref_top = max(0, box["y"])
+                ref_right = min(reference_image.width, box["x"] + box["width"])
+                ref_bottom = min(reference_image.height, box["y"] + box["height"])
+                reference_crop = reference_image.crop((ref_left, ref_top, ref_right, ref_bottom)).resize(
+                    (right - left, bottom - top),
+                    Image.Resampling.LANCZOS,
+                )
+                difference = ImageChops.difference(reference_crop, rendered_crop)
+                pixels = getattr(difference, "get_flattened_data", difference.getdata)()
+                changed = sum(1 for pixel in pixels if max(pixel) > 8)
+                total = max((right - left) * (bottom - top), 1)
+                diff_path = output / f"region-{index}.png"
+                difference.save(diff_path)
+                reports.append({
+                    "region": index,
+                    "type": region.get("type", "zone"),
+                    "box": box,
+                    "differenceRatio": round(changed / total, 6),
+                    "diffImage": str(diff_path.resolve()),
+                })
+
+    return {
+        "reference": str(reference_path.resolve()),
+        "rendered": str(rendered_path.resolve()),
+        "regions": reports,
+        "regionCount": len(reports),
+    }

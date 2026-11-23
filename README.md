@@ -96,6 +96,26 @@ MCP tools:
 - `design_register_plugin`
 - `design_browser_qa`
 - `design_push`
+- `design_compare_regions`
+- `design_plugin_keys`
+- `design_plugin_sign`
+- `design_plugin_execute`
+- `design_github_status`
+- `design_github_release`
+- `design_mnemosyne_preview`
+
+## Finalized first roadmap set
+
+- OCR reading order and grid anchors
+- Semantic inferred header, section, card and action components
+- OCR-region-aware visual comparison
+- Tailwind mappings
+- PBR texture output
+- 3D engine manifests
+- HMAC and Ed25519 plugin signatures
+- Allowlist plugin execution
+- Mnemosyne preview handoff
+- GitHub status and release helpers
 
 ## End-to-end pipeline
 

@@ -66,3 +66,52 @@ def push_repository(repo: str | Path, remote: str = "origin", branch: str = "mai
         check=False,
     )
     return {"passed": result.returncode == 0, "output": result.stdout, "error": result.stderr}
+
+
+def github_status(repo: str | Path) -> dict[str, Any]:
+    repo_path = Path(repo)
+    remotes = subprocess.run(
+        ["git", "-C", str(repo_path), "remote", "-v"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    gh = subprocess.run(
+        ["gh", "repo", "view", "--json", "nameWithOwner,url,defaultBranchRef,visibility"],
+        cwd=repo_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return {
+        "passed": gh.returncode == 0,
+        "repo": gh.stdout.strip(),
+        "remotes": remotes.stdout,
+        "error": gh.stderr,
+    }
+
+
+def github_create_release(repo: str | Path, tag: str, title: str, notes: str = "") -> dict[str, Any]:
+    repo_path = Path(repo)
+    args = ["gh", "release", "create", tag, "--title", title]
+    if notes:
+        args.extend(["--notes", notes])
+    result = subprocess.run(args, cwd=repo_path, capture_output=True, text=True, check=False)
+    return {"passed": result.returncode == 0, "output": result.stdout, "error": result.stderr}
+
+
+def mnemosyne_launch_preview(preview_dir: str | Path) -> dict[str, Any]:
+    preview = Path(preview_dir)
+    if not preview.exists():
+        raise FileNotFoundError(f"Preview directory not found: {preview}")
+    candidates = [preview / "dist" / "index.html", preview / "index.html"]
+    target = next((candidate for candidate in candidates if candidate.is_file()), None)
+    if target is None:
+        raise FileNotFoundError(f"No preview index found in: {preview}")
+    handoff = create_mnemosyne_handoff({"preview": str(target.resolve())}, preview / "handoff")
+    return {
+        "passed": True,
+        "host": "Mnemosyne",
+        "preview": str(target.resolve()),
+        "handoff": handoff["handoff"],
+    }

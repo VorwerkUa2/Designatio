@@ -6,6 +6,8 @@ import base64
 import json
 import struct
 
+from .layout import extract_layout
+
 
 def image_metadata(path: str | Path) -> dict[str, Any]:
     source = Path(path)
@@ -67,19 +69,44 @@ def analyze_mockup(path: str | Path, mode: str = "modernized") -> dict[str, Any]
         with Image.open(source) as image:
             rgb = image.convert("RGB")
             sampled = rgb.resize((64, 64))
-            palette = [f"#{red:02X}{green:02X}{blue:02X}" for red, green, blue in sampled.quantize(colors=8).getpalette()[:24]]
+            quantized = sampled.quantize(colors=8)
+            raw_palette = quantized.getpalette() or []
+            palette = [
+                f"#{raw_palette[index]:02X}{raw_palette[index + 1]:02X}{raw_palette[index + 2]:02X}"
+                for index in range(0, min(len(raw_palette), 24), 3)
+            ]
             palette = list(dict.fromkeys(palette))
     except (ImportError, OSError, ValueError):
         pass
+
+    try:
+        layout = extract_layout(source)
+    except (OSError, ValueError):
+        layout = {
+            "available": False,
+            "layout": "unknown",
+            "zones": [],
+            "componentHints": {},
+            "text": {"blocks": [], "items": [], "count": 0},
+            "ocrError": "The source file could not be decoded as an image",
+        }
 
     return {
         "source": metadata,
         "mode": mode,
         "detected": {
-            "layout": "unknown",
-            "components": [],
-            "typography": "requires image OCR/layout detection",
+            "layout": layout.get("layout", "unknown"),
+            "components": [
+                {"type": kind, "count": count}
+                for kind, count in layout.get("componentHints", {}).items()
+                if count
+            ],
+            "text": layout.get("text", {}),
+            "zones": layout.get("zones", []),
+            "typography": "requires font identification" if not layout.get("text", {}).get("items") else "text regions detected",
             "colors": palette,
+            "visionAvailable": layout.get("available", False),
+            "ocrError": layout.get("ocrError"),
         },
         "issues": issues,
         "nextActions": [

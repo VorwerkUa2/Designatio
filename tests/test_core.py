@@ -84,3 +84,16 @@ def test_visual_diff(tmp_path: Path) -> None:
     assert report["differentPixels"] == 200
     assert report["differenceRatio"] == 1.0
     assert (tmp_path / "comparison" / "diff.png").is_file()
+
+
+def test_mockup_layout_has_machine_readable_result(tmp_path: Path) -> None:
+    from PIL import Image
+
+    mockup = tmp_path / "layout.png"
+    Image.new("RGB", (1440, 900), "#F5F7FB").save(mockup)
+
+    result = analyze_mockup(mockup)
+
+    assert "detected" in result
+    assert "visionAvailable" in result["detected"]
+    assert isinstance(result["detected"]["zones"], list)

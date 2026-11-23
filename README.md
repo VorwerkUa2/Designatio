@@ -20,6 +20,7 @@ py -m designatio.cli compare output/mockup.png output/screens/desktop.png --outp
 ```powershell
 cd C:\Users\knyaz\Desktop\Designatio
 py -m pip install -e ".[test,image]"
+py -m pip install -e ".[vision,browser]"
 ```
 
 ## CLI

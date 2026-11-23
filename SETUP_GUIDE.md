@@ -10,10 +10,11 @@
 
 ## Python setup
 
+Windows:
+
 ```powershell
 cd C:\Users\knyaz\Desktop\Designatio
-py -m pip install -e ".[test,image,vision,browser]"
-py -m playwright install chromium
+.\install.ps1
 ```
 
 Install Tesseract OCR from https://github.com/UB-Mannheim/tesseract/wiki or by:
@@ -22,10 +23,17 @@ Install Tesseract OCR from https://github.com/UB-Mannheim/tesseract/wiki or by:
 winget install --id UB-Mannheim.TesseractOCR --exact
 ```
 
+Linux/macOS:
+
+```sh
+cd /path/to/Designatio
+./install.sh
+```
+
 ## Run the complete pipeline
 
 ```powershell
-py -m designatio.cli pipeline C:\path\to\mockup.png --name "My Product" --output output\pipeline
+python -m designatio.cli pipeline /path/to/mockup.png --name "My Product" --output output/pipeline
 ```
 
 This creates:
@@ -40,7 +48,7 @@ This creates:
 ## Run MCP
 
 ```powershell
-py -m designatio.mcp.server
+python -m designatio.mcp.server
 ```
 
 Example `.claude.json` MCP registration:
@@ -49,7 +57,7 @@ Example `.claude.json` MCP registration:
 {
   "mcpServers": {
     "designatio": {
-      "command": "py",
+      "command": "python",
       "args": ["-m", "designatio.mcp.server"],
       "cwd": "C:/Users/knyaz/Desktop/Designatio"
     }

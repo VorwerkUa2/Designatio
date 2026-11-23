@@ -4,6 +4,9 @@ from pathlib import Path
 from typing import Any
 import shutil
 import subprocess
+import os
+
+from .platform import npm_command, python_executable
 
 
 def validate_source(target: str, source_dir: str | Path) -> dict[str, Any]:
@@ -13,7 +16,7 @@ def validate_source(target: str, source_dir: str | Path) -> dict[str, Any]:
         raise FileNotFoundError(f"Source directory not found: {source}")
 
     if normalized in {"python", "py"}:
-        command = ["python", "-m", "compileall", "-q", str(source)]
+        command = [python_executable(), "-m", "compileall", "-q", str(source)]
         runner = command
     elif normalized in {"react", "html", "vite"}:
         if not shutil.which("npm"):
@@ -21,7 +24,7 @@ def validate_source(target: str, source_dir: str | Path) -> dict[str, Any]:
         package = source / "package.json"
         if not package.is_file():
             return {"target": normalized, "passed": False, "status": "invalid-output", "error": "package.json not found"}
-        runner = ["cmd", "/d", "/c", "npm", "run", "build"]
+        runner = npm_command("run", "build")
     elif normalized in {"rust", "egui"}:
         if not shutil.which("cargo"):
             return {"target": normalized, "passed": False, "status": "toolchain-unavailable", "error": "cargo not found"}
@@ -34,7 +37,7 @@ def validate_source(target: str, source_dir: str | Path) -> dict[str, Any]:
             return {"target": normalized, "passed": False, "status": "toolchain-unavailable", "error": "flutter not found"}
         runner = [executable, "analyze"]
     elif normalized in {"compose", "kotlin", "android"}:
-        gradle = source / "gradlew"
+        gradle = source / ("gradlew.bat" if os.name == "nt" else "gradlew")
         if not gradle.is_file():
             return {"target": normalized, "passed": False, "status": "toolchain-unavailable", "error": "Gradle wrapper not found"}
         runner = [str(gradle), "assembleDebug"]

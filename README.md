@@ -32,42 +32,50 @@ Flutter, Compose, SwiftUI, egui, React, Vue, Angular, Dear ImGui, Three.js,
 Babylon.js, PixiJS, Pygame, Raylib, SDL and many framework-specific libraries.
 
 ```powershell
-py -m designatio.cli catalog
-py -m designatio.cli catalog --language rust
-py -m designatio.cli resolve-stack "Create a C++ Qt app with OpenGL"
-py -m designatio.cli render-native flutter output/project.json --output output/flutter
-py -m designatio.cli render-native swiftui output/project.json --output output/swiftui
-py -m designatio.cli render-native compose output/project.json --output output/compose
-py -m designatio.cli render-native egui output/project.json --output output/egui
-py -m designatio.cli import-figma figma-screen.json --name "Dashboard" --output output/figma
-py -m designatio.cli texture <source-image> --output output/texture
-py -m designatio.cli tailwind output/project.json --output output/tailwind.txt
+python -m designatio.cli catalog
+python -m designatio.cli catalog --language rust
+python -m designatio.cli resolve-stack "Create a C++ Qt app with OpenGL"
+python -m designatio.cli render-native flutter output/project.json --output output/flutter
+python -m designatio.cli render-native swiftui output/project.json --output output/swiftui
+python -m designatio.cli render-native compose output/project.json --output output/compose
+python -m designatio.cli render-native egui output/project.json --output output/egui
+python -m designatio.cli import-figma figma-screen.json --name "Dashboard" --output output/figma
+python -m designatio.cli texture <source-image> --output output/texture
+python -m designatio.cli tailwind output/project.json --output output/tailwind.txt
 ```
 
 ## Installation
 ```powershell
 cd C:\Users\knyaz\Desktop\Designatio
-py -m pip install -e ".[test,image,vision,browser]"
+.\install.ps1
+```
+
+Linux/macOS:
+
+```sh
+cd /path/to/Designatio
+chmod +x install.sh
+./install.sh
 ```
 
 ## CLI
 
 ```powershell
-py -m designatio.cli init --name "CRM Dashboard" --platform web --stack html
-py -m designatio.cli analyze mockup.png --project output/project.json
-py -m designatio.cli render output/project.json --output output/site
-py -m designatio.cli render-react output/project.json --output output/react
-py -m designatio.cli route "Create a responsive React dashboard"
-py -m designatio.cli pipeline mockup.png --name "CRM Dashboard" --output output/pipeline
-py -m designatio.cli catalog
-py -m designatio.cli catalog --language swift
-py -m designatio.cli resolve-stack "Create a native C++ Qt app with OpenGL"
+python -m designatio.cli init --name "CRM Dashboard" --platform web --stack html
+python -m designatio.cli analyze mockup.png --project output/project.json
+python -m designatio.cli render output/project.json --output output/site
+python -m designatio.cli render-react output/project.json --output output/react
+python -m designatio.cli route "Create a responsive React dashboard"
+python -m designatio.cli pipeline mockup.png --name "CRM Dashboard" --output output/pipeline
+python -m designatio.cli catalog
+python -m designatio.cli catalog --language swift
+python -m designatio.cli resolve-stack "Create a native C++ Qt app with OpenGL"
 ```
 
 ## MCP
 
 ```powershell
-py -m designatio.mcp.server
+python -m designatio.mcp.server
 ```
 
 MCP tools:

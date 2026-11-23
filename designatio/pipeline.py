@@ -3,6 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 import subprocess
+import sys
+
+from .platform import npm_command
 
 from .contracts import create_project, save_project
 from .mockup import analyze_mockup
@@ -41,14 +44,34 @@ def run_pipeline(
     save_project(rendered, project_path)
 
     react_dir = output / "react"
-    npm_command = ["cmd", "/d", "/c", "npm", "install", "&&", "npm", "run", "build"]
-    build = subprocess.run(
-        npm_command,
-        cwd=react_dir,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        install_command = npm_command("install")
+        install = subprocess.run(
+            install_command,
+            cwd=react_dir,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+        if install.returncode != 0:
+            raise RuntimeError((install.stderr + install.stdout)[-4000:])
+        build_command = npm_command("run", "build")
+        build = subprocess.run(
+            build_command,
+            cwd=react_dir,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+    except (RuntimeError, subprocess.TimeoutExpired) as error:
+        build = subprocess.CompletedProcess(
+            [],
+            1,
+            stdout="",
+            stderr=str(error),
+        )
     if build.returncode != 0:
         project["reports"].append({
             "type": "react-build",

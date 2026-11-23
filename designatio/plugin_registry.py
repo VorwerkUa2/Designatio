@@ -9,6 +9,8 @@ import os
 import shutil
 import subprocess
 import tempfile
+import sys
+import os
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
@@ -145,10 +147,12 @@ class PluginRegistry:
             return {"accepted": True, "target": target, "sandbox": "allowlist-json", "manifest": manifest, "payload": payload, "entryData": data}
 
         with tempfile.TemporaryDirectory(prefix="designatio-plugin-") as temp_dir:
+            process_env = dict(os.environ)
+            process_env["DESIGNATIO_PAYLOAD"] = json.dumps(payload, ensure_ascii=False)
             result = subprocess.run(
-                ["python", "-I", str(resolved)],
+                [sys.executable, "-I", str(resolved)],
                 cwd=temp_dir,
-                env={"DESIGNATIO_PAYLOAD": json.dumps(payload, ensure_ascii=False)},
+                env=process_env,
                 capture_output=True,
                 text=True,
                 timeout=10,

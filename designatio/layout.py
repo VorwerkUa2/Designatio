@@ -4,13 +4,11 @@ from pathlib import Path
 from typing import Any
 
 from .layout_analysis import detect_grid, merge_reading_order
+from .platform import tesseract_executable
 
 
 def _tesseract_candidates() -> tuple[str, ...]:
-    return (
-        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
-        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
-    )
+    return tuple(candidate for candidate in (tesseract_executable(),) if candidate)
 
 
 def extract_layout(path: str | Path) -> dict[str, Any]:
@@ -26,10 +24,7 @@ def extract_layout(path: str | Path) -> dict[str, Any]:
     except ImportError as error:
         return {"available": False, "error": f"Vision dependency missing: {error.name}"}
 
-    pytesseract.pytesseract.tesseract_cmd = next(
-        (candidate for candidate in _tesseract_candidates() if Path(candidate).is_file()),
-        "tesseract",
-    )
+    pytesseract.pytesseract.tesseract_cmd = next(iter(_tesseract_candidates()), "tesseract")
 
     try:
         with Image.open(source).convert("RGB") as pil_image:

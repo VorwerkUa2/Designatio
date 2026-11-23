@@ -7,7 +7,7 @@ name = "designatio"
 version = "0.1.0"
 description = "Universal AI design MCP, renderer and mockup-to-code toolkit"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = ["cryptography>=43.0"]
 
 [project.optional-dependencies]
 image = ["Pillow>=10.0"]

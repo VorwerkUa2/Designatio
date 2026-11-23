@@ -21,6 +21,7 @@ from designatio.shader_validation import validate_shader
 from designatio.plugin_marketplace import create_marketplace_entry
 from designatio.trust_store import TrustStore
 from designatio.preview_host import start_preview_server, stop_preview_server
+from designatio.platform import python_executable, npm_executable, tesseract_executable
 from designatio.engine_manifest import export_engine_manifest
 from designatio.publish import create_mnemosyne_handoff
 from designatio.native_renderers import render_native
@@ -463,6 +464,13 @@ def test_loopback_preview_host(tmp_path: Path) -> None:
     assert started["running"] is True
     assert started["url"] == "http://127.0.0.1:4199"
     assert stopped["running"] is False
+
+
+def test_platform_helpers_resolve_cross_platform_executables() -> None:
+    assert python_executable()
+    assert npm_executable() is None or isinstance(npm_executable(), str)
+    discovered = tesseract_executable()
+    assert discovered is None or isinstance(discovered, str)
 
 
 def test_plugin_bundle_rejects_traversal(tmp_path: Path) -> None:

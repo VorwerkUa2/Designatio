@@ -121,6 +121,8 @@ MCP tools:
 - `design_sandbox_status`
 - `design_toolchains`
 - `design_hosted_marketplace`
+- `design_marketplace_host`
+- `design_sandbox_command`
 - `design_trust_key`
 - `design_preview_host`
 - `design_sandbox_policy`

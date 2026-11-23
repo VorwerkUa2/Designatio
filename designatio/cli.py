@@ -27,6 +27,8 @@ from .mnemosyne_bridge import build_mnemosyne_mcp_config, create_mnemosyne_previ
 from .os_sandbox import detect_os_sandbox, validate_sandbox_backend
 from .toolchain_matrix import inspect_toolchain_matrix
 from .hosted_marketplace import validate_hosted_entry, create_hosted_index
+from .hosted_marketplace import start_marketplace_server, stop_marketplace_server
+from .os_sandbox import build_sandbox_command
 from .trust_store import TrustStore
 from .preview_host import start_preview_server, stop_preview_server
 from .publish import github_create_pr, github_create_issue
@@ -167,6 +169,15 @@ def build_parser() -> argparse.ArgumentParser:
     marketplace = subparsers.add_parser("hosted-marketplace")
     marketplace.add_argument("entries")
     marketplace.add_argument("--output", default="output/hosted-marketplace.json")
+
+    marketplace_host = subparsers.add_parser("marketplace-host")
+    marketplace_host.add_argument("directory")
+    marketplace_host.add_argument("--port", type=int, default=4174)
+    marketplace_host.add_argument("--stop", action="store_true")
+
+    sandbox_command = subparsers.add_parser("sandbox-command")
+    sandbox_command.add_argument("entry")
+    sandbox_command.add_argument("--backend")
 
     trust = subparsers.add_parser("trust-key")
     trust.add_argument("name")
@@ -376,6 +387,15 @@ def main(argv: list[str] | None = None) -> int:
         entries = json.loads(Path(args.entries).read_text(encoding="utf-8-sig"))
         report = create_hosted_index(entries, args.output)
         print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "marketplace-host":
+        report = stop_marketplace_server(args.port) if args.stop else start_marketplace_server(args.directory, args.port)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "sandbox-command":
+        print(json.dumps(build_sandbox_command(args.entry, {}, args.backend), ensure_ascii=False, indent=2))
         return 0
 
     if args.command == "trust-key":

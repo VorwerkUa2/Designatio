@@ -34,6 +34,8 @@
 - Native SDK CI matrix entries for React, Rust, Flutter and Compose
 - OS sandbox backend detection
 - Hosted marketplace index validation
+- Loopback hosted marketplace server
+- OS/container sandbox command adapters
 - Real Mnemosyne MCP config and preview manifest bridge
 - Mnemosyne preview handoff
 - Accessibility and responsive reports

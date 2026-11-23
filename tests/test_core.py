@@ -25,6 +25,8 @@ from designatio.platform import python_executable, npm_executable, tesseract_exe
 from designatio.mnemosyne_bridge import build_mnemosyne_mcp_config, create_mnemosyne_preview_manifest
 from designatio.os_sandbox import detect_os_sandbox
 from designatio.toolchain_matrix import inspect_toolchain_matrix
+from designatio.hosted_marketplace import start_marketplace_server, stop_marketplace_server
+from designatio.os_sandbox import build_sandbox_command
 from designatio.hosted_marketplace import validate_hosted_entry, create_hosted_index
 from designatio.os_sandbox import detect_os_sandbox, validate_sandbox_backend
 from designatio.toolchain_matrix import inspect_toolchain_matrix
@@ -505,6 +507,27 @@ def test_hosted_marketplace_validation_and_index(tmp_path: Path) -> None:
     assert validation["passed"] is True
     assert index["count"] == 1
     assert (tmp_path / "marketplace.json").is_file()
+
+
+def test_loopback_marketplace_server(tmp_path: Path) -> None:
+    (tmp_path / "marketplace.json").write_text(json.dumps({"schema": "1", "entries": []}), encoding="utf-8")
+
+    started = start_marketplace_server(tmp_path, 4196)
+    stopped = stop_marketplace_server(4196)
+
+    assert started["running"] is True
+    assert started["url"] == "http://127.0.0.1:4196"
+    assert stopped["running"] is False
+
+
+def test_sandbox_command_builder(tmp_path: Path) -> None:
+    entry = tmp_path / "entry.json"
+    entry.write_text(json.dumps({"mode": "read-only"}), encoding="utf-8")
+
+    report = build_sandbox_command(entry, {"region": "header"}, "bounded")
+
+    assert report["backend"] == "bounded"
+    assert report["command"][-1].endswith("entry.json")
 
 
 def test_mnemosyne_bridge_contract(tmp_path: Path) -> None:

@@ -4,6 +4,9 @@ from pathlib import Path
 from typing import Any
 import json
 import re
+from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
+from functools import partial
+import threading
 
 
 NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{1,63}$")
@@ -40,3 +43,29 @@ def create_hosted_index(entries: list[dict[str, Any]], output_path: str | Path) 
     }
     output.write_text(json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8")
     return {"index": str(output.resolve()), "count": len(validated)}
+
+
+MARKETPLACE_SERVERS: dict[int, ThreadingHTTPServer] = {}
+
+
+def start_marketplace_server(directory: str | Path, port: int = 4174) -> dict[str, Any]:
+    root = Path(directory).resolve()
+    if not root.is_dir():
+        raise FileNotFoundError(f"Marketplace directory not found: {root}")
+    if port in MARKETPLACE_SERVERS:
+        return {"running": True, "port": port, "url": f"http://127.0.0.1:{port}", "directory": str(root)}
+    handler = partial(SimpleHTTPRequestHandler, directory=str(root))
+    server = ThreadingHTTPServer(("127.0.0.1", port), handler)
+    thread = threading.Thread(target=server.serve_forever, name=f"designatio-marketplace-{port}", daemon=True)
+    thread.start()
+    MARKETPLACE_SERVERS[port] = server
+    return {"running": True, "port": port, "url": f"http://127.0.0.1:{port}", "directory": str(root)}
+
+
+def stop_marketplace_server(port: int) -> dict[str, Any]:
+    server = MARKETPLACE_SERVERS.pop(port, None)
+    if server is None:
+        return {"running": False, "port": port}
+    server.shutdown()
+    server.server_close()
+    return {"running": False, "port": port}

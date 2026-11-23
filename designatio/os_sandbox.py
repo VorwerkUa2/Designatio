@@ -5,6 +5,7 @@ from typing import Any
 import os
 import shutil
 import subprocess
+import sys
 
 
 def detect_os_sandbox() -> dict[str, Any]:
@@ -68,4 +69,55 @@ def run_sandbox_probe(command: list[str], timeout: int = 10) -> dict[str, Any]:
         "returnCode": result.returncode,
         "stdout": result.stdout[-4000:],
         "stderr": result.stderr[-4000:],
+    }
+
+
+def build_sandbox_command(entry: str | Path, payload: dict[str, Any], backend: str | None = None) -> dict[str, Any]:
+    entry_path = Path(entry).resolve()
+    if not entry_path.is_file():
+        raise FileNotFoundError(f"Sandbox entry not found: {entry_path}")
+    chosen = (backend or detect_os_sandbox().get("activeBackend") or "bounded")
+    if chosen == "bwrap" and shutil.which("bwrap"):
+        command = [
+            "bwrap",
+            "--die-with-parent",
+            "--unshare-net",
+            "--ro-bind", "/usr", "/usr",
+            "--proc", "/proc",
+            "--dev", "/dev",
+            "--bind", str(entry_path.parent), str(entry_path.parent),
+            "--chdir", str(entry_path.parent),
+            "python",
+            "-I",
+            str(entry_path),
+        ]
+    elif chosen == "firejail" and shutil.which("firejail"):
+        command = ["firejail", "--quiet", "--netnone", "--private=" + str(entry_path.parent), sys.executable, "-I", str(entry_path)]
+    elif chosen == "docker" and shutil.which("docker"):
+        command = [
+            "docker", "run", "--rm", "--network", "none",
+            "-v", f"{entry_path.parent}:{entry_path.parent}",
+            "-w", str(entry_path.parent),
+            "python:3.12-slim",
+            "python",
+            "-I",
+            str(entry_path),
+        ]
+    elif chosen == "podman" and shutil.which("podman"):
+        command = [
+            "podman", "run", "--rm", "--network", "none",
+            "-v", f"{entry_path.parent}:{entry_path.parent}",
+            "-w", str(entry_path.parent),
+            "python:3.12-slim",
+            "python",
+            "-I",
+            str(entry_path),
+        ]
+    else:
+        command = [sys.executable, "-I", str(entry_path)]
+    return {
+        "backend": chosen,
+        "command": command,
+        "payloadEnvironment": "DESIGNATIO_PAYLOAD",
+        "payload": payload,
     }

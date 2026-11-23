@@ -27,6 +27,8 @@ from ..mnemosyne_bridge import build_mnemosyne_mcp_config, create_mnemosyne_prev
 from ..os_sandbox import detect_os_sandbox, validate_sandbox_backend
 from ..toolchain_matrix import inspect_toolchain_matrix
 from ..hosted_marketplace import validate_hosted_entry, create_hosted_index
+from ..hosted_marketplace import start_marketplace_server, stop_marketplace_server
+from ..os_sandbox import build_sandbox_command
 from ..publish import github_create_pr, github_create_issue
 from ..trust_store import TrustStore
 from ..preview_host import start_preview_server, stop_preview_server
@@ -332,6 +334,16 @@ TOOLS = [
         "description": "Validate and create a hosted plugin marketplace index.",
         "inputSchema": {"type": "object", "properties": {"entries": {"type": "array"}, "outputDir": {"type": "string"}}, "required": ["entries", "outputDir"]},
     },
+    {
+        "name": "design_marketplace_host",
+        "description": "Start or stop a loopback hosted marketplace server.",
+        "inputSchema": {"type": "object", "properties": {"directory": {"type": "string"}, "port": {"type": "integer"}, "stop": {"type": "boolean"}}, "required": ["directory"]},
+    },
+    {
+        "name": "design_sandbox_command",
+        "description": "Build an OS/container sandbox command for a signed plugin entry.",
+        "inputSchema": {"type": "object", "properties": {"entry": {"type": "string"}, "backend": {"type": "string"}, "payload": {"type": "object"}}, "required": ["entry"]},
+    },
 ]
 
 
@@ -532,6 +544,14 @@ def execute(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     if name == "design_hosted_marketplace":
         output = Path(arguments["outputDir"]) / "marketplace.json"
         return result(create_hosted_index(arguments["entries"], output))
+
+    if name == "design_marketplace_host":
+        if arguments.get("stop", False):
+            return result(stop_marketplace_server(int(arguments.get("port", 4174))))
+        return result(start_marketplace_server(arguments["directory"], int(arguments.get("port", 4174))))
+
+    if name == "design_sandbox_command":
+        return result(build_sandbox_command(arguments["entry"], arguments.get("payload", {}), arguments.get("backend")))
 
     if name == "design_trust_key":
         store = TrustStore(arguments.get("storeDir", "output/trust"))

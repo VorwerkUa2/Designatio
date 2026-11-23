@@ -11,6 +11,7 @@ from ..renderers import render_html, render_react
 from ..router import route_task
 from ..validation import check_accessibility, check_responsive
 from ..visual import take_screenshots, compare_images
+from ..pipeline import run_pipeline
 
 
 TOOLS = [
@@ -117,6 +118,20 @@ TOOLS = [
             "required": ["projectPath", "outputDir"],
         },
     },
+    {
+        "name": "design_run_pipeline",
+        "description": "Run the complete mockup-to-code pipeline with React build, screenshots, accessibility and visual comparison.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "mockupPath": {"type": "string"},
+                "outputDir": {"type": "string"},
+                "name": {"type": "string"},
+                "mode": {"type": "string"},
+            },
+            "required": ["mockupPath", "outputDir"],
+        },
+    },
 ]
 
 
@@ -185,6 +200,14 @@ def execute(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         rendered = render_react(project, arguments["outputDir"])
         save_project(rendered, project_path)
         return result(rendered["preview"])
+
+    if name == "design_run_pipeline":
+        return result(run_pipeline(
+            arguments["mockupPath"],
+            arguments["outputDir"],
+            arguments.get("name", "Untitled design"),
+            arguments.get("mode", "production-ready"),
+        ))
 
     raise ValueError(f"Unknown tool: {name}")
 

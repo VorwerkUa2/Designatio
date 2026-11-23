@@ -9,6 +9,67 @@ import struct
 from .layout import extract_layout
 
 
+def infer_components(analysis: dict[str, Any], project_name: str) -> list[dict[str, Any]]:
+    detected = analysis.get("detected", {})
+    text_items = detected.get("text", {}).get("items", [])
+    zones = detected.get("zones", [])
+
+    components: list[dict[str, Any]] = []
+    header_items = [
+        item for item in text_items
+        if item["box"]["y"] < analysis["source"].get("height", 100000) * 0.25
+    ]
+    if header_items:
+        header_title = " ".join(item["text"] for item in header_items[:4])
+        remaining = " ".join(item["text"] for item in header_items[4:8])
+    else:
+        header_title = project_name
+        remaining = "Production-ready responsive interface"
+    components.append({
+        "type": "header",
+        "title": header_title[:120],
+        "description": remaining[:240],
+    })
+
+    card_zones = [zone for zone in zones if zone["type"] == "card"][:6]
+    used_boxes: set[int] = set()
+    for index, zone in enumerate(card_zones, start=1):
+        box = zone["box"]
+        title_parts: list[str] = []
+        description_parts: list[str] = []
+        for item in text_items:
+            item_box = item["box"]
+            inside = (
+                item_box["x"] >= box["x"] - 12
+                and item_box["y"] >= box["y"] - 12
+                and item_box["x"] + item_box["width"] <= box["x"] + box["width"] + 12
+                and item_box["y"] + item_box["height"] <= box["y"] + box["height"] + 12
+            )
+            if inside:
+                text = item["text"]
+                text_id = id(item)
+                if text_id not in used_boxes:
+                    used_boxes.add(text_id)
+                    if len(title_parts) < 3:
+                        title_parts.append(text)
+                    else:
+                        description_parts.append(text)
+
+        if title_parts or description_parts:
+            components.append({
+                "type": "card",
+                "title": " ".join(title_parts[:3])[:120] or f"Card {index}",
+                "description": " ".join(description_parts[:18])[:240],
+            })
+
+    if len(components) == 1:
+        components.extend([
+            {"type": "card", "title": "Primary overview", "description": "Production-ready content"},
+            {"type": "card", "title": "Supporting details", "description": "Accessible and responsive details"},
+        ])
+    return components
+
+
 def image_metadata(path: str | Path) -> dict[str, Any]:
     source = Path(path)
     if not source.is_file():
@@ -91,9 +152,20 @@ def analyze_mockup(path: str | Path, mode: str = "modernized") -> dict[str, Any]
             "ocrError": "The source file could not be decoded as an image",
         }
 
+    components = infer_components({
+        "source": metadata,
+        "detected": {
+            "layout": layout.get("layout", "unknown"),
+            "text": layout.get("text", {}),
+            "zones": layout.get("zones", []),
+            "componentHints": layout.get("componentHints", {}),
+        },
+    }, metadata["name"])
+
     return {
         "source": metadata,
         "mode": mode,
+        "components": components,
         "detected": {
             "layout": layout.get("layout", "unknown"),
             "components": [

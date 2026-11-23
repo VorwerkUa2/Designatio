@@ -7,6 +7,7 @@ from designatio.renderers import render_html, render_react
 from designatio.router import route_task
 from designatio.validation import check_accessibility, check_responsive
 from designatio.visual import compare_images
+from designatio.mockup import infer_components
 
 
 def test_project_roundtrip(tmp_path: Path) -> None:
@@ -114,3 +115,26 @@ def test_react_renderer(tmp_path: Path) -> None:
     assert "Users" in app
     assert "@media (max-width: 768px)" in css
     assert rendered["preview"]["breakpoints"] == [1440, 1024, 768, 390]
+
+
+def test_infer_components_uses_header_and_card_hints() -> None:
+    analysis = {
+        "source": {"height": 900},
+        "detected": {
+            "text": {
+                "items": [
+                    {"text": "CRM", "confidence": 96.0, "box": {"x": 100, "y": 60, "width": 40, "height": 20}},
+                    {"text": "Dashboard", "confidence": 96.0, "box": {"x": 150, "y": 60, "width": 90, "height": 20}},
+                ],
+            },
+            "zones": [
+                {"type": "card", "box": {"x": 100, "y": 200, "width": 400, "height": 200}, "area": 80000},
+            ],
+        },
+    }
+
+    components = infer_components(analysis, "Test")
+
+    assert components[0]["type"] == "header"
+    assert "CRM" in components[0]["title"]
+    assert any(component["type"] == "card" for component in components)

@@ -10,6 +10,7 @@ from .renderers import render_html, render_react
 from .router import route_task
 from .validation import check_accessibility, check_responsive
 from .visual import take_screenshots, compare_images
+from .pipeline import run_pipeline
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -51,6 +52,12 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("rendered")
     compare.add_argument("--output", default="output/comparison")
 
+    pipeline = subparsers.add_parser("pipeline")
+    pipeline.add_argument("mockup")
+    pipeline.add_argument("--name", default="Untitled design")
+    pipeline.add_argument("--mode", default="production-ready")
+    pipeline.add_argument("--output", default="output/pipeline")
+
     return parser
 
 
@@ -69,6 +76,7 @@ def main(argv: list[str] | None = None) -> int:
         analysis = analyze_mockup(args.mockup, args.mode)
         project["brief"]["mode"] = args.mode
         project["assets"].append(analysis["source"])
+        project["components"] = analysis.get("components", [])
         project["reports"].append({"type": "mockup-analysis", "data": analysis})
         save_project(project, project_path)
         print(json.dumps(analysis, ensure_ascii=False, indent=2))
@@ -113,6 +121,11 @@ def main(argv: list[str] | None = None) -> int:
         report = compare_images(args.reference, args.rendered, args.output)
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0
+
+    if args.command == "pipeline":
+        report = run_pipeline(args.mockup, args.output, args.name, args.mode)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0 if report["passed"] else 1
 
     return 2
 

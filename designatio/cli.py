@@ -11,6 +11,7 @@ from .router import route_task
 from .validation import check_accessibility, check_responsive
 from .visual import take_screenshots, compare_images
 from .pipeline import run_pipeline
+from .catalog import get_language_catalog, resolve_language, find_graphics_libraries
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -57,6 +58,12 @@ def build_parser() -> argparse.ArgumentParser:
     pipeline.add_argument("--name", default="Untitled design")
     pipeline.add_argument("--mode", default="production-ready")
     pipeline.add_argument("--output", default="output/pipeline")
+
+    catalog = subparsers.add_parser("catalog")
+    catalog.add_argument("--language")
+
+    resolve = subparsers.add_parser("resolve-stack")
+    resolve.add_argument("prompt")
 
     return parser
 
@@ -126,6 +133,19 @@ def main(argv: list[str] | None = None) -> int:
         report = run_pipeline(args.mockup, args.output, args.name, args.mode)
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0 if report["passed"] else 1
+
+    if args.command == "catalog":
+        if args.language:
+            canonical = resolve_language(args.language)
+            catalog_data = get_language_catalog().get(canonical, {}) if canonical else {}
+        else:
+            catalog_data = get_language_catalog()
+        print(json.dumps(catalog_data, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "resolve-stack":
+        print(json.dumps(find_graphics_libraries(args.prompt), ensure_ascii=False, indent=2))
+        return 0
 
     return 2
 

@@ -1,5 +1,15 @@
 # Roadmap
 
+## Implemented foundation
+
+- Broad language, framework, graphics library and preview catalog
+- OpenCV/Tesseract layout extraction
+- HTML and React/Vite renderers
+- Responsive Chromium screenshots
+- Pillow visual comparison
+- Accessibility and responsive reports
+- End-to-end mockup pipeline
+
 ## Next production stages
 
 - Real text merging and reading order in OCR layout

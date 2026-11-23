@@ -8,6 +8,7 @@ from designatio.router import route_task
 from designatio.validation import check_accessibility, check_responsive
 from designatio.visual import compare_images
 from designatio.mockup import infer_components
+from designatio.catalog import get_language_catalog, resolve_language, find_graphics_libraries
 
 
 def test_project_roundtrip(tmp_path: Path) -> None:
@@ -138,3 +139,21 @@ def test_infer_components_uses_header_and_card_hints() -> None:
     assert components[0]["type"] == "header"
     assert "CRM" in components[0]["title"]
     assert any(component["type"] == "card" for component in components)
+
+
+def test_language_catalog_is_broad_and_resolvable() -> None:
+    catalog = get_language_catalog()
+
+    assert len(catalog) >= 25
+    assert resolve_language("c#") == "csharp"
+    assert resolve_language("tsx") == "typescript"
+    assert "Skia" in catalog["dart"]["graphics"]
+    assert "Dear ImGui" in catalog["cpp"]["graphics"]
+
+
+def test_stack_resolution_matches_language() -> None:
+    matches = find_graphics_libraries("Create a native SwiftUI app with Swift")
+
+    assert matches
+    assert matches[0]["language"] == "swift"
+    assert "Metal" in matches[0]["graphics"]

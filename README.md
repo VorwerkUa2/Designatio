@@ -18,6 +18,24 @@ Designatio routes design tasks to focused skills, validates results, and renders
 - Extract text and layout zones from screenshots
 - Capture desktop/tablet/mobile screenshots in Chromium
 - Generate pixel diffs and React implementations
+- Resolve 27 programming languages to UI frameworks, graphics engines and preview methods
+
+## Language and graphics catalog
+
+Designatio includes a built-in registry for JavaScript, TypeScript, Python, Dart,
+Rust, C#, Java, Kotlin, Swift, Objective-C, C++, C, Go, PHP, Ruby, Elixir,
+Scala, Haskell, Lua, R, Julia, Zig, Nim, Crystal, F#, Groovy and Visual Basic.
+
+The catalog covers web UI, native desktop/mobile UI, game engines, 2D/3D graphics,
+canvas, SVG, Skia, Cairo, OpenGL, Vulkan, DirectX, Metal, WebGPU, WGPU, Qt,
+Flutter, Compose, SwiftUI, egui, React, Vue, Angular, Dear ImGui, Three.js,
+Babylon.js, PixiJS, Pygame, Raylib, SDL and many framework-specific libraries.
+
+```powershell
+py -m designatio.cli catalog
+py -m designatio.cli catalog --language rust
+py -m designatio.cli resolve-stack "Create a C++ Qt app with OpenGL"
+```
 
 ## Installation
 ```powershell
@@ -34,6 +52,9 @@ py -m designatio.cli render output/project.json --output output/site
 py -m designatio.cli render-react output/project.json --output output/react
 py -m designatio.cli route "Create a responsive React dashboard"
 py -m designatio.cli pipeline mockup.png --name "CRM Dashboard" --output output/pipeline
+py -m designatio.cli catalog
+py -m designatio.cli catalog --language swift
+py -m designatio.cli resolve-stack "Create a native C++ Qt app with OpenGL"
 ```
 
 ## MCP
@@ -56,6 +77,8 @@ MCP tools:
 - `design_compare`
 - `design_render_react`
 - `design_run_pipeline`
+- `design_list_languages`
+- `design_resolve_stack`
 
 ## End-to-end pipeline
 

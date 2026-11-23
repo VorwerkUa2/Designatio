@@ -12,6 +12,7 @@ from ..router import route_task
 from ..validation import check_accessibility, check_responsive
 from ..visual import take_screenshots, compare_images
 from ..pipeline import run_pipeline
+from ..catalog import get_language_catalog, resolve_language, find_graphics_libraries
 
 
 TOOLS = [
@@ -132,6 +133,20 @@ TOOLS = [
             "required": ["mockupPath", "outputDir"],
         },
     },
+    {
+        "name": "design_list_languages",
+        "description": "List supported programming languages and their UI, graphics and preview libraries.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "design_resolve_stack",
+        "description": "Resolve a language or framework request into UI, graphics and preview recommendations.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"prompt": {"type": "string"}, "language": {"type": "string"}},
+            "required": ["prompt"],
+        },
+    },
 ]
 
 
@@ -209,6 +224,19 @@ def execute(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
             arguments.get("mode", "production-ready"),
         ))
 
+    if name == "design_list_languages":
+        return result({
+            "count": len(get_language_catalog()),
+            "languages": get_language_catalog(),
+        })
+
+    if name == "design_resolve_stack":
+        language = resolve_language(arguments.get("language", ""))
+        return result({
+            "language": language,
+            "matches": find_graphics_libraries(arguments["prompt"]),
+        })
+
     raise ValueError(f"Unknown tool: {name}")
 
 
@@ -248,6 +276,13 @@ def handle(request: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def main() -> int:
+    if hasattr(sys.stdin, "reconfigure"):
+        sys.stdin.reconfigure(encoding="utf-8")
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8")
+
     for line in sys.stdin:
         line = line.strip()
         if not line:

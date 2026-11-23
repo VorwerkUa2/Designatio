@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from .catalog import find_graphics_libraries
+
 
 SKILLS = {
     "design-discovery": ("brief", ["discover", "brief", "requirement", "briefing"]),
@@ -33,8 +35,10 @@ def route_task(prompt: str) -> dict[str, Any]:
         matched.append("accessibility")
 
     matched = list(dict.fromkeys(matched))
+    stack_matches = find_graphics_libraries(prompt)
     return {
         "profiles": matched,
         "skills": [{"name": name, "category": SKILLS[name][0]} for name in matched],
+        "languages": stack_matches,
         "mode": "plan" if "plan" in text else "turbo",
     }

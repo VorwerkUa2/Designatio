@@ -1,5 +1,4 @@
 # Designatio
-
 **Універсальний MCP-інструмент для професійного продуктового дизайну, mockup-to-code та перевірки адаптивних інтерфейсів.**
 
 Designatio routes design tasks to focused skills, validates results, and renders HTML/CSS or JSON design systems. It is designed to run with Claude Code, Mnemosyne, or another MCP host.
@@ -73,4 +72,3 @@ MCP tools:
 ## Project state
 
 The project JSON is the source of truth for brief, platform, stack, screens, components, tokens, assets, accessibility settings and validation reports.
-

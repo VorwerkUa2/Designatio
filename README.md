@@ -35,6 +35,11 @@ Babylon.js, PixiJS, Pygame, Raylib, SDL and many framework-specific libraries.
 py -m designatio.cli catalog
 py -m designatio.cli catalog --language rust
 py -m designatio.cli resolve-stack "Create a C++ Qt app with OpenGL"
+py -m designatio.cli render-native flutter output/project.json --output output/flutter
+py -m designatio.cli render-native swiftui output/project.json --output output/swiftui
+py -m designatio.cli render-native compose output/project.json --output output/compose
+py -m designatio.cli render-native egui output/project.json --output output/egui
+py -m designatio.cli import-figma figma-screen.json --name "Dashboard" --output output/figma
 ```
 
 ## Installation

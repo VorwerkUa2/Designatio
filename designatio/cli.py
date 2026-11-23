@@ -12,6 +12,8 @@ from .validation import check_accessibility, check_responsive
 from .visual import take_screenshots, compare_images
 from .pipeline import run_pipeline
 from .catalog import get_language_catalog, resolve_language, find_graphics_libraries
+from .native_renderers import render_native
+from .figma import import_figma_json
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -64,6 +66,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     resolve = subparsers.add_parser("resolve-stack")
     resolve.add_argument("prompt")
+
+    render_native_parser = subparsers.add_parser("render-native")
+    render_native_parser.add_argument("target")
+    render_native_parser.add_argument("project")
+    render_native_parser.add_argument("--output", required=True)
+
+    figma = subparsers.add_parser("import-figma")
+    figma.add_argument("json")
+    figma.add_argument("--output", default="output/figma")
+    figma.add_argument("--name")
 
     return parser
 
@@ -145,6 +157,17 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "resolve-stack":
         print(json.dumps(find_graphics_libraries(args.prompt), ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "render-native":
+        project = load_project(args.project)
+        report = render_native(project, args.target, args.output)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "import-figma":
+        report = import_figma_json(args.json, args.output, args.name)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0
 
     return 2

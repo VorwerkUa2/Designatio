@@ -13,6 +13,8 @@ from ..validation import check_accessibility, check_responsive
 from ..visual import take_screenshots, compare_images
 from ..pipeline import run_pipeline
 from ..catalog import get_language_catalog, resolve_language, find_graphics_libraries
+from ..native_renderers import render_native
+from ..figma import import_figma_json
 
 
 TOOLS = [
@@ -147,6 +149,28 @@ TOOLS = [
             "required": ["prompt"],
         },
     },
+    {
+        "name": "design_render_native",
+        "description": "Generate Flutter, SwiftUI, Compose or egui source from a Designatio project.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "projectPath": {"type": "string"},
+                "target": {"type": "string", "enum": ["flutter", "swiftui", "compose", "egui"]},
+                "outputDir": {"type": "string"},
+            },
+            "required": ["projectPath", "target", "outputDir"],
+        },
+    },
+    {
+        "name": "design_import_figma",
+        "description": "Import Figma exported JSON into the Designatio project schema.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"jsonPath": {"type": "string"}, "outputDir": {"type": "string"}, "name": {"type": "string"}},
+            "required": ["jsonPath", "outputDir"],
+        },
+    },
 ]
 
 
@@ -236,6 +260,13 @@ def execute(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
             "language": language,
             "matches": find_graphics_libraries(arguments["prompt"]),
         })
+
+    if name == "design_render_native":
+        project = load_project(arguments["projectPath"])
+        return result(render_native(project, arguments["target"], arguments["outputDir"]))
+
+    if name == "design_import_figma":
+        return result(import_figma_json(arguments["jsonPath"], arguments["outputDir"], arguments.get("name")))
 
     raise ValueError(f"Unknown tool: {name}")
 

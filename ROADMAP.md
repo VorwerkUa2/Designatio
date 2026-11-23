@@ -3,6 +3,8 @@
 ## Implemented foundation
 
 - Broad language, framework, graphics library and preview catalog
+- Flutter, SwiftUI, Compose and egui source renderers
+- Figma exported JSON import
 - OpenCV/Tesseract layout extraction
 - HTML and React/Vite renderers
 - Responsive Chromium screenshots

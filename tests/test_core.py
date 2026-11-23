@@ -9,6 +9,8 @@ from designatio.validation import check_accessibility, check_responsive
 from designatio.visual import compare_images
 from designatio.mockup import infer_components
 from designatio.catalog import get_language_catalog, resolve_language, find_graphics_libraries
+from designatio.native_renderers import render_native
+from designatio.figma import import_figma_json
 
 
 def test_project_roundtrip(tmp_path: Path) -> None:
@@ -157,3 +159,45 @@ def test_stack_resolution_matches_language() -> None:
     assert matches
     assert matches[0]["language"] == "swift"
     assert "Metal" in matches[0]["graphics"]
+
+
+def test_native_renderers_generate_source(tmp_path: Path) -> None:
+    project = create_project("Native app")
+    project["components"] = [
+        {"type": "header", "title": "Dashboard", "description": "Overview"},
+        {"type": "card", "title": "Users", "description": "1,200"},
+    ]
+
+    flutter = render_native(project, "flutter", tmp_path / "flutter")
+    swift = render_native(project, "swiftui", tmp_path / "swiftui")
+    compose = render_native(project, "compose", tmp_path / "compose")
+    egui = render_native(project, "egui", tmp_path / "egui")
+
+    assert (tmp_path / "flutter" / "lib" / "main.dart").is_file()
+    assert (tmp_path / "swiftui" / "ContentView.swift").is_file()
+    assert "VStack" in (tmp_path / "swiftui" / "ContentView.swift").read_text(encoding="utf-8")
+    assert "Text(" in (tmp_path / "compose" / "DesignatioScreen.kt").read_text(encoding="utf-8")
+    assert "CentralPanel" in (tmp_path / "egui" / "main.rs").read_text(encoding="utf-8")
+    assert flutter["renderer"] == "flutter"
+
+
+def test_figma_json_import(tmp_path: Path) -> None:
+    figma = tmp_path / "screen.json"
+    figma.write_text(json.dumps({
+        "name": "Dashboard",
+        "document": {
+            "name": "Root",
+            "type": "CANVAS",
+            "children": [{
+                "name": "Desktop",
+                "type": "FRAME",
+                "children": [{"name": "Title", "type": "TEXT", "characters": "Sales dashboard"}],
+            }],
+        },
+    }), encoding="utf-8")
+
+    result = import_figma_json(figma, tmp_path / "project")
+
+    assert result["components"] >= 1
+    assert result["textNodes"] == 1
+    assert (tmp_path / "project" / "project.json").is_file()

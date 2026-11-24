@@ -599,6 +599,36 @@ def test_figma_api_requires_token() -> None:
         raise AssertionError("Figma API accepted a missing token")
 
 
+def test_figma_mcp_tool_does_not_expose_token_input() -> None:
+    from designatio.mcp.server import TOOLS
+
+    tool = next(item for item in TOOLS if item["name"] == "design_import_figma_api")
+    assert "token" not in tool["inputSchema"]["properties"]
+
+
+def test_figma_mcp_dispatch_does_not_forward_tool_token(monkeypatch, tmp_path: Path) -> None:
+    from designatio.mcp import server
+
+    calls = []
+
+    def fake_import(file_key, output_dir, token=None, project_name=None):
+        calls.append((file_key, output_dir, token, project_name))
+        return {"ok": True}
+
+    monkeypatch.setattr(server, "import_figma_api", fake_import)
+    server.execute(
+        "design_import_figma_api",
+        {
+            "fileKey": "file-key",
+            "outputDir": str(tmp_path),
+            "name": "Design",
+            "token": "model-supplied-token",
+        },
+    )
+
+    assert calls == [("file-key", str(tmp_path), None, "Design")]
+
+
 def test_bootstrap_is_explicit(tmp_path: Path) -> None:
     import contextlib
     import io

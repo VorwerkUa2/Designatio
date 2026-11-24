@@ -14,9 +14,12 @@ def fetch_figma_file(file_key: str, token: str | None = None) -> dict[str, Any]:
     key = file_key.strip()
     if not key:
         raise ValueError("Figma file key is required")
-    auth = token or os.getenv("FIGMA_TOKEN")
+    auth = (token or os.getenv("FIGMA_TOKEN") or "").strip()
     if not auth:
-        raise ValueError("Figma token is required via argument or FIGMA_TOKEN")
+        raise ValueError(
+            "Figma token is missing; configure it in Mnemosyne Settings or set FIGMA_TOKEN. "
+            "Importing a local Figma JSON file does not require a token."
+        )
     request = Request(
         f"https://api.figma.com/v1/files/{key}",
         headers={"X-Figma-Token": auth, "Accept": "application/json"},

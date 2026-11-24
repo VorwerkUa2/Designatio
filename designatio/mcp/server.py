@@ -358,8 +358,8 @@ TOOLS = [
     },
     {
         "name": "design_import_figma_api",
-        "description": "Fetch a Figma file through the Figma API and import it into Designatio.",
-        "inputSchema": {"type": "object", "properties": {"fileKey": {"type": "string"}, "token": {"type": "string"}, "outputDir": {"type": "string"}, "name": {"type": "string"}}, "required": ["fileKey", "outputDir"]},
+        "description": "Fetch a Figma file using the user's configured FIGMA_TOKEN and import it into Designatio.",
+        "inputSchema": {"type": "object", "properties": {"fileKey": {"type": "string"}, "outputDir": {"type": "string"}, "name": {"type": "string"}}, "required": ["fileKey", "outputDir"]},
     },
     {
         "name": "design_execute_sandbox_command",
@@ -591,8 +591,7 @@ def execute(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return result(import_figma_api(
             arguments["fileKey"],
             arguments["outputDir"],
-            arguments.get("token"),
-            arguments.get("name"),
+            project_name=arguments.get("name"),
         ))
 
     if name == "design_execute_sandbox_command":

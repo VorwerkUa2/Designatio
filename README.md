@@ -133,6 +133,15 @@ MCP tools:
 - `design_mnemosyne_mcp_config`
 - `design_mnemosyne_preview_manifest`
 
+### Figma API credentials
+
+Figma API import requires each user to provide their own personal access token.
+In Mnemosyne, enter it in **Settings → Designatio MCP**; it is stored in the
+operating system's credential store and supplied only to the Designatio MCP
+process. For the CLI or another MCP host, set `FIGMA_TOKEN` in that user's
+environment. The MCP tool does not accept a token as an AI-generated argument.
+Importing a local Figma JSON export does not require a token.
+
 ## Finalized first roadmap set
 
 - OCR reading order and grid anchors

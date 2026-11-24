@@ -158,6 +158,18 @@ MCP tools:
 6. Check accessibility and responsive structure
 7. Compare the implementation against the source mockup
 
+## Marketplace and sandbox limits
+
+The GitHub Pages workflow publishes `marketplace-index.html` and the validated
+catalog from `marketplace-entries.json`. Add real, downloadable plugin bundle
+metadata to that file before listing plugins; the repository intentionally
+starts with an empty catalog rather than a placeholder package.
+
+On Windows, the Job Object backend limits the process count and terminates the
+job on cleanup, but does **not** isolate filesystem or network access. The
+built-in Python plugin runner is not a security boundary for untrusted code.
+Use a properly configured container or OS sandbox for untrusted plugins.
+
 ## Project state
 
 The project JSON is the source of truth for brief, platform, stack, screens, components, tokens, assets, accessibility settings and validation reports.

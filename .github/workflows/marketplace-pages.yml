@@ -28,11 +28,12 @@ jobs:
       - name: Prepare marketplace
         run: |
           mkdir -p output/pages
-          printf '[{"name":"region-qa","version":"1.0.0","target":"security","entry":"entry.json","bundle":"region-qa.dsgzip","platforms":["windows","linux","macos"]}]' > output/hosted-entries.json
           python -m pip install -e ".[test]"
-          python -m designatio.cli hosted-marketplace output/hosted-entries.json --output output/pages/hosted-index.json
-      - name: Add Pages JSON header
-        run: cp output/pages/hosted-index.json output/pages/marketplace.json
+          python -m designatio.cli hosted-marketplace marketplace-entries.json --output output/pages/hosted-index.json
+      - name: Publish marketplace index
+        run: |
+          cp output/pages/hosted-index.json output/pages/marketplace.json
+          cp marketplace-index.html output/pages/index.html
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

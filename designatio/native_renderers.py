@@ -28,7 +28,7 @@ def render_flutter(project: dict[str, Any], output_dir: str | Path) -> dict[str,
     components = _components(project)
     header = next((item for item in components if item.get("type") == "header"), components[0])
     cards = [item for item in components if item.get("type") != "header"]
-    card_widgets = "\n".join(
+    card_widgets = ",\n".join(
         '            Card(child: Padding(padding: const EdgeInsets.all(16), child: '
         'Column(crossAxisAlignment: CrossAxisAlignment.start, children: ['
         f'Text("{_safe_text(card.get("title", "Card"))}", style: Theme.of(context).textTheme.titleMedium),'
@@ -75,7 +75,7 @@ class DesignatioScreen extends StatelessWidget {{
               Text("{_safe_text(header.get("description", ""))}",
                   style: Theme.of(context).textTheme.bodyLarge),
               const SizedBox(height: 24),
-{card_widgets},
+{card_widgets}
             ],
           ),
         ),

@@ -204,6 +204,8 @@ def test_native_renderers_generate_source(tmp_path: Path) -> None:
     egui = render_native(project, "egui", tmp_path / "egui")
 
     assert (tmp_path / "flutter" / "lib" / "main.dart").is_file()
+    flutter_source = (tmp_path / "flutter" / "lib" / "main.dart").read_text(encoding="utf-8")
+    assert "),\n            Card(" in flutter_source
     assert (tmp_path / "swiftui" / "ContentView.swift").is_file()
     assert "VStack" in (tmp_path / "swiftui" / "ContentView.swift").read_text(encoding="utf-8")
     assert "Text(" in (tmp_path / "compose" / "DesignatioScreen.kt").read_text(encoding="utf-8")

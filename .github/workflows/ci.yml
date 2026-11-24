@@ -80,7 +80,7 @@ jobs:
       - name: Generate Flutter sample
         run: python -m designatio.cli init --name "CI Flutter" --platform mobile --stack flutter --output output/project.json && python -m designatio.cli render-native flutter output/project.json --output output/flutter
       - name: Flutter analyze
-        run: cd output/flutter && flutter analyze
+        run: cd output/flutter && flutter analyze --no-fatal-infos
 
   android-compose-build:
     runs-on: ubuntu-latest

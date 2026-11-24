@@ -182,7 +182,8 @@ fun DesignatioScreen() {{
 
 def render_egui(project: dict[str, Any], output_dir: str | Path) -> dict[str, Any]:
     output = Path(output_dir)
-    output.mkdir(parents=True, exist_ok=True)
+    src = output / "src"
+    src.mkdir(parents=True, exist_ok=True)
     components = _components(project)
     header = next((item for item in components if item.get("type") == "header"), components[0])
     cards = [item for item in components if item.get("type") != "header"]
@@ -217,13 +218,13 @@ impl eframe::App for DesignatioApp {{
     }}
 }}
 '''
-    (output / "main.rs").write_text(source, encoding="utf-8")
+    (src / "main.rs").write_text(source, encoding="utf-8")
     (output / "Cargo.toml").write_text(
         '[package]\nname = "designatio-generated"\nversion = "0.1.0"\nedition = "2021"\n\n'
         '[dependencies]\neframe = "0.33"\n',
         encoding="utf-8",
     )
-    return {"renderer": "egui", "entry": str((output / "main.rs").resolve()), "files": [str((output / "main.rs").resolve()), str((output / "Cargo.toml").resolve())]}
+    return {"renderer": "egui", "entry": str((src / "main.rs").resolve()), "files": [str((src / "main.rs").resolve()), str((output / "Cargo.toml").resolve())]}
 
 
 def render_tauri(project: dict[str, Any], output_dir: str | Path) -> dict[str, Any]:

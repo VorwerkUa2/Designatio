@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import subprocess
 import sys
 
 from designatio.contracts import create_project, load_project, save_project
@@ -206,7 +207,7 @@ def test_native_renderers_generate_source(tmp_path: Path) -> None:
     assert (tmp_path / "swiftui" / "ContentView.swift").is_file()
     assert "VStack" in (tmp_path / "swiftui" / "ContentView.swift").read_text(encoding="utf-8")
     assert "Text(" in (tmp_path / "compose" / "DesignatioScreen.kt").read_text(encoding="utf-8")
-    assert "CentralPanel" in (tmp_path / "egui" / "main.rs").read_text(encoding="utf-8")
+    assert "CentralPanel" in (tmp_path / "egui" / "src" / "main.rs").read_text(encoding="utf-8")
     assert flutter["renderer"] == "flutter"
 
 
@@ -543,6 +544,48 @@ def test_windows_job_object_command_when_requested(tmp_path: Path) -> None:
 
     assert report["backend"] == "job-object"
     assert str(entry) in report["command"]
+
+
+def test_windows_job_object_executes_child_process(tmp_path: Path) -> None:
+    if sys.platform != "win32":
+        return
+
+    entry = tmp_path / "entry.py"
+    entry.write_text("print('job-object-ok')\n", encoding="utf-8")
+    report = build_sandbox_command(entry, {}, "job-object")
+
+    execution = execute_sandbox_command(report, timeout=5)
+
+    assert execution["passed"] is True
+    assert execution["stdout"].strip() == "job-object-ok"
+
+    entry.write_text("import time; time.sleep(30)\n", encoding="utf-8")
+    timeout_report = build_sandbox_command(entry, {}, "job-object")
+    timeout_execution = execute_sandbox_command(timeout_report, timeout=1)
+
+    assert timeout_execution["passed"] is False
+
+
+def test_cli_and_mcp_import_without_optional_pillow() -> None:
+    script = """
+import builtins
+original_import = builtins.__import__
+def import_without_pillow(name, *args, **kwargs):
+    if name == "PIL" or name.startswith("PIL."):
+        raise ModuleNotFoundError("Pillow intentionally unavailable")
+    return original_import(name, *args, **kwargs)
+builtins.__import__ = import_without_pillow
+import designatio.cli
+import designatio.mcp.server
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_figma_api_requires_token() -> None:

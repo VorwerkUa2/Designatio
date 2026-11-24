@@ -17,7 +17,7 @@ def detect_os_sandbox() -> dict[str, Any]:
         if shutil.which("podman"):
             candidates.append({"backend": "podman", "status": "available", "isolation": "container"})
         if shutil.which("where.exe"):
-            candidates.append({"backend": "job-object", "status": "platform-supported", "isolation": "job-and-process"})
+            candidates.append({"backend": "job-object", "status": "platform-supported", "isolation": "process-resource-limits"})
     else:
         for executable in ("bwrap", "firejail", "systemd-run", "docker", "podman"):
             found = shutil.which(executable)
@@ -46,7 +46,11 @@ def validate_sandbox_backend(backend: str) -> dict[str, Any]:
     if normalized == "job-object":
         if os.name != "nt":
             return {"backend": normalized, "available": False, "reason": "Windows-only"}
-        return {"backend": normalized, "available": True, "reason": "Platform-supported adapter; native implementation required"}
+        return {
+            "backend": normalized,
+            "available": True,
+            "reason": "Limits process count and cleanup; does not isolate filesystem or network",
+        }
     if not executable:
         return {"backend": normalized, "available": False, "reason": "Unknown backend"}
     path = shutil.which(executable)
@@ -194,6 +198,22 @@ def run_windows_job_object(command: list[str], payload: dict[str, Any], timeout:
         ]
 
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+    kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+    kernel32.SetInformationJobObject.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_int,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+    ]
+    kernel32.SetInformationJobObject.restype = wintypes.BOOL
+    kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+    kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+    kernel32.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    kernel32.TerminateJobObject.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
     job = kernel32.CreateJobObjectW(None, None)
     if not job:
         return {"passed": False, "backend": "job-object", "status": "create-failed", "error": ctypes.get_last_error()}
@@ -212,28 +232,29 @@ def run_windows_job_object(command: list[str], payload: dict[str, Any], timeout:
         kernel32.CloseHandle(job)
         return {"passed": False, "backend": "job-object", "status": "configure-failed", "error": ctypes.get_last_error()}
 
-    environment = dict(os.environ)
-    environment["DESIGNATIO_PAYLOAD"] = json.dumps(payload, ensure_ascii=False)
-    process = subprocess.Popen(
-        command,
-        env=environment,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    process_handle = process._handle
-    if not kernel32.AssignProcessToJobObject(job, process_handle):
-        process.terminate()
-        kernel32.CloseHandle(job)
-        return {"passed": False, "backend": "job-object", "status": "assign-failed", "error": ctypes.get_last_error()}
-
     try:
-        stdout, stderr = process.communicate(timeout=timeout)
-        passed = process.returncode == 0
-    except subprocess.TimeoutExpired:
-        kernel32.TerminateJobObject(job, 1)
-        stdout, stderr = process.communicate(timeout=5)
-        passed = False
+        environment = dict(os.environ)
+        environment["DESIGNATIO_PAYLOAD"] = json.dumps(payload, ensure_ascii=False)
+        process = subprocess.Popen(
+            command,
+            env=environment,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        if not kernel32.AssignProcessToJobObject(job, wintypes.HANDLE(process._handle)):
+            error = ctypes.get_last_error()
+            process.terminate()
+            process.wait()
+            return {"passed": False, "backend": "job-object", "status": "assign-failed", "error": error}
+
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+            passed = process.returncode == 0
+        except subprocess.TimeoutExpired:
+            kernel32.TerminateJobObject(job, 1)
+            stdout, stderr = process.communicate(timeout=5)
+            passed = False
     finally:
         kernel32.CloseHandle(job)
 

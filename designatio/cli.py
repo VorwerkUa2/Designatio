@@ -15,7 +15,6 @@ from .catalog import get_language_catalog, resolve_language, find_graphics_libra
 from .native_renderers import render_native
 from .figma import import_figma_json
 from .design_mappings import export_tailwind, react_tailwind_source
-from .texture_pipeline import generate_seamless
 from .engine_manifest import export_engine_manifest
 from .publish import git_status, create_commit, create_mnemosyne_handoff
 from .publish import mnemosyne_launch_preview
@@ -315,6 +314,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "texture":
+        from .texture_pipeline import generate_seamless
+
         report = generate_seamless(args.source, args.output)
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0

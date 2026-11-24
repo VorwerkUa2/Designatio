@@ -16,7 +16,6 @@ from ..catalog import get_language_catalog, resolve_language, find_graphics_libr
 from ..native_renderers import render_native
 from ..figma import import_figma_json
 from ..design_mappings import export_tailwind
-from ..texture_pipeline import generate_seamless
 from ..engine_manifest import export_engine_manifest
 from ..publish import git_status, create_commit, create_mnemosyne_handoff, push_repository, github_status, github_create_release, mnemosyne_launch_preview
 from ..build_validation import validate_source
@@ -473,6 +472,8 @@ def execute(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return result({"mapping": str(mapping_path.resolve()), "data": export_tailwind(project)})
 
     if name == "design_generate_texture":
+        from ..texture_pipeline import generate_seamless
+
         size = arguments.get("size", 512)
         report = generate_seamless(arguments["source"], arguments["outputDir"], int(size))
         return result(report)
